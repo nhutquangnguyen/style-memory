@@ -1,0 +1,287 @@
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/models.dart';
+
+class SupabaseService {
+  static late SupabaseClient _client;
+
+  static SupabaseClient get client => _client;
+
+  static Future<void> initialize({
+    required String supabaseUrl,
+    required String supabaseAnonKey,
+  }) async {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+    _client = Supabase.instance.client;
+  }
+
+  // Auth methods
+  static User? get currentUser => _client.auth.currentUser;
+  static bool get isAuthenticated => currentUser != null;
+
+  static Future<AuthResponse> signUp({
+    required String email,
+    required String password,
+    String? fullName,
+  }) async {
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'full_name': fullName,
+        'email': email,
+      },
+    );
+
+    // Profile creation is now handled by database trigger
+    // If needed, we can ensure profile exists after a short delay
+    if (response.user != null && response.session != null) {
+      // Small delay to ensure trigger has completed
+      await Future.delayed(const Duration(milliseconds: 500));
+      await _ensureUserProfileExists(response.user!);
+    }
+
+    return response;
+  }
+
+  static Future<AuthResponse> signIn({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
+
+    // Ensure profile exists for existing users (edge case handling)
+    if (response.user != null && response.session != null) {
+      await _ensureUserProfileExists(response.user!);
+    }
+
+    return response;
+  }
+
+  static Future<void> signOut() async {
+    await _client.auth.signOut();
+  }
+
+  static Future<void> resetPassword(String email) async {
+    await _client.auth.resetPasswordForEmail(email);
+  }
+
+  // Helper method to ensure user profile exists
+  static Future<void> _ensureUserProfileExists(User user) async {
+    try {
+      final existingProfile = await _client
+          .from('user_profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (existingProfile == null) {
+        // Profile doesn't exist, create it manually as fallback
+        await _client.from('user_profiles').insert({
+          'id': user.id,
+          'email': user.email ?? '',
+          'full_name': user.userMetadata?['full_name'] ?? '',
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      // Log error but don't throw - profile might have been created by trigger
+      // In production, use a proper logging framework
+    }
+  }
+
+  // User Profile methods
+  static Future<UserProfile?> getCurrentUserProfile() async {
+    if (!isAuthenticated) return null;
+
+    final response = await _client
+        .from('user_profiles')
+        .select()
+        .eq('id', currentUser!.id)
+        .maybeSingle();
+
+    if (response != null) {
+      return UserProfile.fromJson(response);
+    }
+    return null;
+  }
+
+  static Future<UserProfile> createUserProfile(UserProfile profile) async {
+    final response = await _client
+        .from('user_profiles')
+        .insert(profile.toJson())
+        .select()
+        .single();
+
+    return UserProfile.fromJson(response);
+  }
+
+  static Future<void> updateUserProfile(UserProfile profile) async {
+    await _client
+        .from('user_profiles')
+        .update(profile.toJson())
+        .eq('id', profile.id);
+  }
+
+  // Client methods
+  static Future<List<Client>> getClients() async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('clients')
+        .select()
+        .eq('user_id', currentUser!.id)
+        .order('created_at', ascending: false);
+
+    return response.map((client) => Client.fromJson(client)).toList();
+  }
+
+  static Future<Client> createClient(Client client) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('clients')
+        .insert(client.toJson())
+        .select()
+        .single();
+
+    return Client.fromJson(response);
+  }
+
+  static Future<void> updateClient(Client client) async {
+    await _client
+        .from('clients')
+        .update(client.toJson())
+        .eq('id', client.id);
+  }
+
+  static Future<void> deleteClient(String clientId) async {
+    await _client.from('clients').delete().eq('id', clientId);
+  }
+
+  // Visit methods
+  static Future<List<Visit>> getVisitsForClient(String clientId) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('visits')
+        .select('''
+          *,
+          photos (*)
+        ''')
+        .eq('client_id', clientId)
+        .eq('user_id', currentUser!.id)
+        .order('visit_date', ascending: false);
+
+    return response.map((visit) => Visit.fromJson(visit)).toList();
+  }
+
+  static Future<Visit> getVisit(String visitId) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('visits')
+        .select('''
+          *,
+          photos (*)
+        ''')
+        .eq('id', visitId)
+        .eq('user_id', currentUser!.id)
+        .single();
+
+    return Visit.fromJson(response);
+  }
+
+  static Future<Visit> createVisit(Visit visit) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('visits')
+        .insert(visit.toJson())
+        .select()
+        .single();
+
+    return Visit.fromJson(response);
+  }
+
+  static Future<void> updateVisit(Visit visit) async {
+    await _client
+        .from('visits')
+        .update(visit.toJson())
+        .eq('id', visit.id);
+  }
+
+  static Future<void> deleteVisit(String visitId) async {
+    // Delete photos from storage first
+    final photos = await _client
+        .from('photos')
+        .select('storage_path')
+        .eq('visit_id', visitId);
+
+    for (final photo in photos) {
+      await _client.storage
+          .from('client-photos')
+          .remove([photo['storage_path']]);
+    }
+
+    // Delete visit (cascade will handle photos table)
+    await _client.from('visits').delete().eq('id', visitId);
+  }
+
+  // Photo methods
+  static Future<String> uploadPhoto({
+    required Uint8List photoData,
+    required String userId,
+    required String visitId,
+    required PhotoType photoType,
+  }) async {
+    // Generate unique filename with timestamp to avoid duplicates
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final fileName = '${photoType.name}_$timestamp.jpg';
+    final path = '$userId/$visitId/$fileName';
+
+    await _client.storage
+        .from('client-photos')
+        .uploadBinary(path, photoData);
+
+    return path;
+  }
+
+  static Future<Photo> createPhoto(Photo photo) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('photos')
+        .insert(photo.toJson())
+        .select()
+        .single();
+
+    return Photo.fromJson(response);
+  }
+
+  static Future<String> getPhotoUrl(String storagePath) async {
+    return _client.storage
+        .from('client-photos')
+        .createSignedUrl(storagePath, 3600); // 1 hour expiry
+  }
+
+  static Future<void> deletePhoto(String photoId, String storagePath) async {
+    // Delete from storage
+    await _client.storage.from('client-photos').remove([storagePath]);
+
+    // Delete from database
+    await _client.from('photos').delete().eq('id', photoId);
+  }
+
+  // Utility methods
+  static Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
+}
