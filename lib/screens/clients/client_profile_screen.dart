@@ -10,6 +10,7 @@ import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
+import '../../widgets/common/modern_button.dart';
 import '../loved_styles/loved_styles_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -133,9 +134,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             ),
             body: Column(
               children: [
-                // Client info header
-                _buildClientHeader(client),
-
                 // Error banner
                 if (visitsProvider.errorMessage != null)
                   Padding(
@@ -153,14 +151,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                 ),
               ],
             ),
-            floatingActionButton: FloatingActionButton(
+            floatingActionButton: ModernFab(
               onPressed: () {
                 context.goNamed(
                   'capture_photos',
                   pathParameters: {'clientId': widget.clientId},
                 );
               },
-              child: const Icon(Icons.add),
+              icon: Icons.camera_alt_rounded,
+              label: 'New Visit',
+              gradient: AppTheme.primaryGradient,
             ),
           ),
         );
@@ -168,57 +168,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  Widget _buildClientHeader(Client client) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppTheme.spacingLarge),
-      decoration: const BoxDecoration(
-        color: AppTheme.cardColor,
-        border: Border(
-          bottom: BorderSide(color: AppTheme.borderColor, width: 1),
-        ),
-      ),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: AppTheme.primaryAccentColor.withOpacity(0.2),
-            child: Text(
-              client.initials,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primaryButtonColor,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppTheme.spacingMedium),
-          Text(
-            client.fullName,
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          if (client.phone != null || client.email != null) ...[
-            const SizedBox(height: AppTheme.spacingSmall),
-            if (client.phone != null)
-              Text(
-                client.phone!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.secondaryTextColor,
-                ),
-              ),
-            if (client.email != null)
-              Text(
-                client.email!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.secondaryTextColor,
-                ),
-              ),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildVisitsList(VisitsProvider visitsProvider, Client client) {
     final allVisits = visitsProvider.getVisitsForClient(widget.clientId);
@@ -245,53 +194,72 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       length: 2,
       child: Column(
         children: [
-          // Tab Bar
+          // Tab Bar - Modern pill style
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+            margin: const EdgeInsets.fromLTRB(
+              AppTheme.spacingMedium,
+              AppTheme.spacingMedium,
+              AppTheme.spacingMedium,
+              AppTheme.spacingSmall,
+            ),
+            padding: const EdgeInsets.all(AppTheme.spacingXs),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(8.0),
+              color: AppTheme.borderLightColor.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusFull),
             ),
             child: TabBar(
               indicator: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.0),
-                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusFull),
+                color: AppTheme.surfaceColor,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: AppTheme.shadowColor,
+                    offset: const Offset(0, 1),
+                    blurRadius: 3,
+                    spreadRadius: 0,
                   ),
                 ],
               ),
               indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: AppTheme.primaryButtonColor,
-              unselectedLabelColor: AppTheme.secondaryTextColor,
+              indicatorPadding: EdgeInsets.zero,
+              labelColor: AppTheme.primaryColor,
+              unselectedLabelColor: AppTheme.mutedTextColor,
               labelStyle: const TextStyle(
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
               ),
               unselectedLabelStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.normal,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
+              dividerColor: Colors.transparent,
+              overlayColor: WidgetStateProperty.all(Colors.transparent),
               tabs: [
                 Tab(
+                  height: 36,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.schedule, size: 16),
-                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: AppTheme.iconSm,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSm),
                       Text('Recent (${allVisits.length})'),
                     ],
                   ),
                 ),
                 Tab(
+                  height: 36,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.favorite, size: 16),
-                      const SizedBox(width: 6),
+                      Icon(
+                        Icons.favorite,
+                        size: AppTheme.iconSm,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSm),
                       Text('Loved (${lovedVisits.length})'),
                     ],
                   ),

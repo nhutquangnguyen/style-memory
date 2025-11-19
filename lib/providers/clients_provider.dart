@@ -25,11 +25,22 @@ class ClientsProvider extends ChangeNotifier {
     if (_searchQuery.isEmpty) {
       return _clients;
     }
-    return _clients
-        .where((client) => client.fullName
-            .toLowerCase()
-            .contains(_searchQuery.toLowerCase()))
-        .toList();
+
+    final query = _searchQuery.toLowerCase();
+    return _clients.where((client) {
+      // Search by name
+      final nameMatch = client.fullName.toLowerCase().contains(query);
+
+      // Search by phone (if available)
+      final phoneMatch = client.phone != null &&
+          client.phone!.toLowerCase().contains(query);
+
+      // Search by email (if available)
+      final emailMatch = client.email != null &&
+          client.email!.toLowerCase().contains(query);
+
+      return nameMatch || phoneMatch || emailMatch;
+    }).toList();
   }
 
   void updateSearchQuery(String query) {

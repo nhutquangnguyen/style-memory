@@ -8,6 +8,10 @@ import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/supabase_service.dart';
 import '../services/photo_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/common/modern_card.dart';
+import '../widgets/common/modern_button.dart';
+import '../widgets/common/modern_input.dart';
 
 class SimplePhotoNotesScreen extends StatefulWidget {
   final Client client;
@@ -40,226 +44,227 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Add Photos & Notes'),
+            Text(
+              'Add Photos & Notes',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             Text(
               widget.client.fullName,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.secondaryTextColor,
+              ),
             ),
           ],
         ),
-        backgroundColor: Colors.purple,
-        foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppTheme.spacingMedium),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
 
-            // Staff Selection
-            Consumer<StaffProvider>(
-              builder: (context, staffProvider, child) {
-                final activeStaff = staffProvider.activeStaff;
+            // Staff Selection Card
+            ModernCard(
+              child: Consumer<StaffProvider>(
+                builder: (context, staffProvider, child) {
+                  final activeStaff = staffProvider.activeStaff;
 
-                return DropdownButtonFormField<Staff>(
-                  initialValue: _selectedStaff,
-                  decoration: const InputDecoration(
-                    labelText: 'Staff Member',
-                    hintText: 'Select who performed this service',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                  items: activeStaff.map((staff) {
-                    return DropdownMenuItem<Staff>(
-                      value: staff,
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 12,
-                            backgroundColor: Colors.purple.withValues(alpha: 0.2),
-                            child: Text(
-                              staff.initials,
-                              style: const TextStyle(fontSize: 10),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  staff.name,
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                  return ModernDropdown<Staff>(
+                    label: 'Staff Member',
+                    hint: 'Select staff member',
+                    value: _selectedStaff,
+                    items: activeStaff.map((staff) {
+                      return DropdownMenuItem<Staff>(
+                        value: staff,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 12,
+                              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              child: Text(
+                                staff.initials,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryColor,
                                 ),
-                                if (staff.specialty != null)
-                                  Text(
-                                    staff.specialty!,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (Staff? newStaff) {
-                    setState(() {
-                      _selectedStaff = newStaff;
-                    });
-                  },
-                  isExpanded: true,
-                );
-              },
+                            const SizedBox(width: AppTheme.spacingSmall),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    staff.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (staff.specialty != null)
+                                    Text(
+                                      staff.specialty!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.secondaryTextColor,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (Staff? newStaff) {
+                      setState(() {
+                        _selectedStaff = newStaff;
+                      });
+                    },
+                    prefixIcon: Icon(
+                      Icons.person_rounded,
+                      color: AppTheme.secondaryTextColor,
+                    ),
+                  );
+                },
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacingLarge),
 
             // Notes Section
-            TextField(
-              controller: _notesController,
-              maxLines: 4,
-              decoration: const InputDecoration(
-                labelText: 'Notes',
-                hintText: 'Add your notes about the service, products used, client preferences, etc...',
-                border: OutlineInputBorder(),
-                alignLabelWithHint: true,
+            ModernCard(
+              child: ModernInput(
+                controller: _notesController,
+                label: 'Visit Notes',
+                hint: 'Add notes about the service, products used, client preferences, etc...',
+                maxLines: 4,
+                variant: ModernInputVariant.filled,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacingLarge),
 
             // Photo Selection Section
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Photos (${_selectedImages.length})',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Photo Grid
-                    if (_selectedImages.isNotEmpty)
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                        itemCount: _selectedImages.length,
-                        itemBuilder: (context, index) {
-                          return Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(_selectedImages[index].path),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
+            ModernHeaderCard(
+              title: 'Photos',
+              subtitle: _selectedImages.isEmpty
+                ? 'Add photos to document this visit'
+                : '${_selectedImages.length} photo${_selectedImages.length == 1 ? '' : 's'} selected',
+              leading: Icon(
+                Icons.photo_camera_rounded,
+                color: AppTheme.primaryColor,
+                size: AppTheme.iconLg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Photo Grid
+                  if (_selectedImages.isNotEmpty) ...[
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: AppTheme.spacingMedium,
+                        mainAxisSpacing: AppTheme.spacingMedium,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: _selectedImages.length,
+                      itemBuilder: (context, index) {
+                        return Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+                              child: Image.file(
+                                File(_selectedImages[index].path),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
                               ),
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: CircleAvatar(
-                                  radius: 12,
-                                  backgroundColor: Colors.red,
-                                  child: IconButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _selectedImages.removeAt(index);
-                                      });
-                                    },
-                                    icon: const Icon(
-                                      Icons.close,
-                                      size: 12,
-                                      color: Colors.white,
-                                    ),
-                                    padding: EdgeInsets.zero,
+                            ),
+                            Positioned(
+                              top: AppTheme.spacingXs,
+                              right: AppTheme.spacingXs,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppTheme.errorColor,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [AppTheme.buttonShadow],
+                                ),
+                                child: IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _selectedImages.removeAt(index);
+                                    });
+                                  },
+                                  icon: Icon(
+                                    Icons.close_rounded,
+                                    size: AppTheme.iconSm,
+                                    color: Colors.white,
+                                  ),
+                                  iconSize: AppTheme.iconSm,
+                                  padding: const EdgeInsets.all(AppTheme.spacingSmall),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 32,
+                                    minHeight: 32,
                                   ),
                                 ),
                               ),
-                            ],
-                          );
-                        },
-                      ),
-
-                    const SizedBox(height: 12),
-
-                    // Photo Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _pickFromCamera,
-                            icon: const Icon(Icons.camera_alt),
-                            label: const Text('Take Photo'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple,
-                              foregroundColor: Colors.white,
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _pickFromGallery,
-                            icon: const Icon(Icons.photo_library),
-                            label: const Text('Gallery'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple.shade300,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
+                    const SizedBox(height: AppTheme.spacingMedium),
                   ],
-                ),
+
+                  // Photo Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ModernButton(
+                          text: 'Camera',
+                          onPressed: _pickFromCamera,
+                          icon: Icons.camera_alt_rounded,
+                          variant: ModernButtonVariant.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spacingMedium),
+                      Expanded(
+                        child: ModernButton(
+                          text: 'Gallery',
+                          onPressed: _pickFromGallery,
+                          icon: Icons.photo_library_rounded,
+                          variant: ModernButtonVariant.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: AppTheme.spacingExtraLarge),
 
             // Save Button
-            ElevatedButton(
+            ModernButton(
+              text: _isUploading ? 'Saving Visit...' : 'Save Visit',
               onPressed: _isUploading ? null : _saveVisit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: _isUploading
-                  ? const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Text('Uploading...'),
-                      ],
-                    )
-                  : const Text('Save Visit'),
+              variant: ModernButtonVariant.success,
+              icon: _isUploading ? null : Icons.save_rounded,
+              loading: _isUploading,
+              fullWidth: true,
+              size: ModernButtonSize.large,
             ),
+            const SizedBox(height: AppTheme.spacingExtraLarge),
           ],
         ),
       ),
