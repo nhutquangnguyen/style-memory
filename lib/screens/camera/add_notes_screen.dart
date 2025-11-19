@@ -48,7 +48,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     final success = await visitsProvider.createVisitWithPhotos(
       clientId: widget.clientId,
       photos: cameraProvider.capturedPhotos,
-      serviceType: _serviceTypeController.text.trim().isEmpty
+      serviceId: _serviceTypeController.text.trim().isEmpty
           ? null
           : _serviceTypeController.text.trim(),
       notes: _notesController.text.trim().isEmpty

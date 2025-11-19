@@ -41,21 +41,7 @@ class StaffProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final userId = _supabase.auth.currentUser?.id;
-      if (userId == null) {
-        throw Exception('User not authenticated');
-      }
-
-      final response = await _supabase
-          .from('staff')
-          .select()
-          .eq('user_id', userId)
-          .order('name');
-
-      _staff = (response as List)
-          .map((json) => Staff.fromJson(json))
-          .toList();
-
+      _staff = await SupabaseService.getStaff();
       debugPrint('Loaded ${_staff.length} staff members');
     } catch (e) {
       _setError('Failed to load staff: $e');

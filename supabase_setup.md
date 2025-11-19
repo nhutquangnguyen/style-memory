@@ -43,13 +43,42 @@ CREATE TABLE clients (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create staff table
+CREATE TABLE staff (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    name VARCHAR NOT NULL,
+    specialty VARCHAR,
+    phone VARCHAR,
+    email VARCHAR,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create services table
+CREATE TABLE services (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    name VARCHAR NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2),
+    duration_minutes INTEGER,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create visits table
 CREATE TABLE visits (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     client_id UUID REFERENCES clients(id) ON DELETE CASCADE,
     user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    staff_id UUID REFERENCES staff(id) ON DELETE SET NULL,
+    service_id UUID REFERENCES services(id) ON DELETE SET NULL,
     visit_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    service_type VARCHAR,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    loved BOOLEAN DEFAULT false,
     notes TEXT,
     products_used TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

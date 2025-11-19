@@ -310,11 +310,11 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
               value: _visit!.formattedVisitDate,
             ),
 
-            if (_visit!.serviceType != null && _visit!.serviceType!.isNotEmpty)
+            if (_visit!.serviceId != null && _visit!.serviceId!.isNotEmpty)
               _buildDetailRow(
-                icon: Icons.content_cut,
+                icon: Icons.design_services,
                 label: 'Service',
-                value: _visit!.serviceType!,
+                value: 'Service selected', // TODO: Resolve service name from serviceId
               ),
 
             // Staff member information

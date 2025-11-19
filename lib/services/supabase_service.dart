@@ -168,6 +168,78 @@ class SupabaseService {
     await _client.from('clients').delete().eq('id', clientId);
   }
 
+  // Service methods
+  static Future<List<Service>> getServices() async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('services')
+        .select()
+        .eq('user_id', currentUser!.id)
+        .order('name');
+
+    return response.map((service) => Service.fromJson(service)).toList();
+  }
+
+  static Future<Service> createService(Service service) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('services')
+        .insert(service.toJson())
+        .select()
+        .single();
+
+    return Service.fromJson(response);
+  }
+
+  static Future<void> updateService(Service service) async {
+    await _client
+        .from('services')
+        .update(service.toJson())
+        .eq('id', service.id);
+  }
+
+  static Future<void> deleteService(String serviceId) async {
+    await _client.from('services').delete().eq('id', serviceId);
+  }
+
+  // Staff methods
+  static Future<List<Staff>> getStaff() async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('staff')
+        .select()
+        .eq('user_id', currentUser!.id)
+        .order('name');
+
+    return response.map((staff) => Staff.fromJson(staff)).toList();
+  }
+
+  static Future<Staff> createStaff(Staff staff) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('staff')
+        .insert(staff.toJson())
+        .select()
+        .single();
+
+    return Staff.fromJson(response);
+  }
+
+  static Future<void> updateStaff(Staff staff) async {
+    await _client
+        .from('staff')
+        .update(staff.toJson())
+        .eq('id', staff.id);
+  }
+
+  static Future<void> deleteStaff(String staffId) async {
+    await _client.from('staff').delete().eq('id', staffId);
+  }
+
   // Visit methods
   static Future<List<Visit>> getVisitsForClient(String clientId) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
@@ -176,7 +248,11 @@ class SupabaseService {
         .from('visits')
         .select('''
           *,
-          photos (*)
+          photos (*),
+          services (
+            id,
+            name
+          )
         ''')
         .eq('client_id', clientId)
         .eq('user_id', currentUser!.id)
@@ -192,7 +268,11 @@ class SupabaseService {
         .from('visits')
         .select('''
           *,
-          photos (*)
+          photos (*),
+          services (
+            id,
+            name
+          )
         ''')
         .eq('id', visitId)
         .eq('user_id', currentUser!.id)

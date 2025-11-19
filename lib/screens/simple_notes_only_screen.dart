@@ -156,7 +156,7 @@ class _SimpleNotesOnlyScreenState extends State<SimpleNotesOnlyScreen> {
         clientId: widget.client.id,
         userId: SupabaseService.currentUser!.id,
         visitDate: DateTime.now(),
-        serviceType: _serviceController.text.trim().isNotEmpty
+        serviceId: _serviceController.text.trim().isNotEmpty
             ? _serviceController.text.trim()
             : null,
         notes: _notesController.text.trim().isNotEmpty

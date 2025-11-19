@@ -6,6 +6,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import 'staff/staff_list_screen.dart';
+import 'services/service_list_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -35,6 +36,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const StaffListScreen(),
+      ),
+    );
+  }
+
+  void _navigateToServiceManagement(BuildContext context) {
+    // Navigate to service management screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const ServiceListScreen(),
       ),
     );
   }
@@ -113,6 +123,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Staff Management',
                 subtitle: 'Manage your team members',
                 onTap: () => _navigateToStaffManagement(context),
+              ),
+              _buildAccountTile(
+                context,
+                icon: Icons.design_services,
+                title: 'Service Management',
+                subtitle: 'Manage your services and pricing',
+                onTap: () => _navigateToServiceManagement(context),
               ),
               _buildAccountTile(
                 context,

@@ -32,12 +32,14 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
   List<XFile> _selectedImages = [];
   bool _isUploading = false;
   Staff? _selectedStaff;
+  Service? _selectedService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<StaffProvider>().loadStaff();
+      context.read<ServiceProvider>().loadServices();
     });
   }
 
@@ -132,6 +134,64 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
                     },
                     prefixIcon: Icon(
                       Icons.person_rounded,
+                      color: AppTheme.secondaryTextColor,
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingLarge),
+
+            // Service Selection Card
+            ModernCard(
+              child: Consumer<ServiceProvider>(
+                builder: (context, serviceProvider, child) {
+                  final activeServices = serviceProvider.activeServices;
+
+                  return ModernDropdown<Service>(
+                    label: 'Service Type',
+                    hint: 'Select service type',
+                    value: _selectedService,
+                    items: activeServices.map((service) {
+                      return DropdownMenuItem<Service>(
+                        value: service,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 12,
+                              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              child: Icon(
+                                Icons.design_services_rounded,
+                                size: 12,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                            const SizedBox(width: AppTheme.spacingSmall),
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    service.name,
+                                    style: const TextStyle(fontWeight: FontWeight.w500),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (Service? newService) {
+                      setState(() {
+                        _selectedService = newService;
+                      });
+                    },
+                    prefixIcon: Icon(
+                      Icons.design_services_rounded,
                       color: AppTheme.secondaryTextColor,
                     ),
                   );
@@ -352,7 +412,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         userId: SupabaseService.currentUser!.id,
         staffId: _selectedStaff?.id, // Include selected staff member
         visitDate: DateTime.now(),
-        serviceType: null, // Service type removed
+        serviceId: _selectedService?.id, // Include selected service
         rating: null, // Rating removed
         loved: false, // Default to not loved
         notes: _notesController.text.trim(),

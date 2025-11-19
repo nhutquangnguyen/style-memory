@@ -6,7 +6,8 @@ class Visit {
   final String userId;
   final String? staffId; // ID of the staff member who performed the service
   final DateTime visitDate;
-  final String? serviceType;
+  final String? serviceId;
+  final String? serviceName; // Service name from joined query
   final int? rating; // Rating from 1-5 stars
   final bool? loved; // Whether this visit result is loved by the client
   final String? notes;
@@ -21,7 +22,8 @@ class Visit {
     required this.userId,
     this.staffId,
     required this.visitDate,
-    this.serviceType,
+    this.serviceId,
+    this.serviceName,
     this.rating,
     this.loved, // Can be null for existing visits
     this.notes,
@@ -38,7 +40,8 @@ class Visit {
       userId: json['user_id'] as String,
       staffId: json['staff_id'] as String?,
       visitDate: DateTime.parse(json['visit_date'] as String),
-      serviceType: json['service_type'] as String?,
+      serviceId: json['service_id'] as String?,
+      serviceName: json['services']?['name'] as String?,
       rating: json['rating'] as int?,
       loved: json['loved'] as bool? ?? false, // Default to false if null
       notes: json['notes'] as String?,
@@ -59,7 +62,7 @@ class Visit {
       'user_id': userId,
       if (staffId != null) 'staff_id': staffId,
       'visit_date': visitDate.toIso8601String(),
-      'service_type': serviceType,
+      'service_id': serviceId,
       if (rating != null) 'rating': rating,
       'loved': loved ?? false,
       'notes': notes,
@@ -82,7 +85,8 @@ class Visit {
     String? userId,
     String? staffId,
     DateTime? visitDate,
-    String? serviceType,
+    String? serviceId,
+    String? serviceName,
     int? rating,
     bool? loved,
     String? notes,
@@ -97,7 +101,8 @@ class Visit {
       userId: userId ?? this.userId,
       staffId: staffId ?? this.staffId,
       visitDate: visitDate ?? this.visitDate,
-      serviceType: serviceType ?? this.serviceType,
+      serviceId: serviceId ?? this.serviceId,
+      serviceName: serviceName ?? this.serviceName,
       rating: rating ?? this.rating,
       loved: loved ?? this.loved,
       notes: notes ?? this.notes,
@@ -132,8 +137,10 @@ class Visit {
 
   // Helper method to get short service description
   String get shortDescription {
-    if (serviceType != null && serviceType!.isNotEmpty) {
-      return serviceType!;
+    if (serviceName != null && serviceName!.isNotEmpty) {
+      return serviceName!;
+    } else if (serviceId != null && serviceId!.isNotEmpty) {
+      return 'Service selected'; // Fallback if serviceName is not available
     } else if (notes != null && notes!.isNotEmpty) {
       return notes!.length > 30 ? '${notes!.substring(0, 30)}...' : notes!;
     } else {

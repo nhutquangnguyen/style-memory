@@ -66,7 +66,7 @@ class VisitsProvider extends ChangeNotifier {
   Future<bool> createVisitWithPhotos({
     required String clientId,
     required Map<PhotoType, Uint8List> photos,
-    String? serviceType,
+    String? serviceId,
     String? notes,
     String? productsUsed,
     DateTime? visitDate,
@@ -91,7 +91,7 @@ class VisitsProvider extends ChangeNotifier {
         clientId: clientId,
         userId: userId,
         visitDate: visitDate ?? DateTime.now(),
-        serviceType: serviceType?.trim(),
+        serviceId: serviceId?.trim(),
         notes: notes?.trim(),
         productsUsed: productsUsed?.trim(),
         createdAt: DateTime.now(),
