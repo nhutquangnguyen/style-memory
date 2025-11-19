@@ -2,9 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 import '../models/models.dart';
+import '../providers/providers.dart';
 import '../services/supabase_service.dart';
+import '../services/photo_service.dart';
 
 class SimplePhotoNotesScreen extends StatefulWidget {
   final Client client;
@@ -21,10 +24,18 @@ class SimplePhotoNotesScreen extends StatefulWidget {
 class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _notesController = TextEditingController();
-  final TextEditingController _serviceController = TextEditingController();
 
   List<XFile> _selectedImages = [];
   bool _isUploading = false;
+  Staff? _selectedStaff;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StaffProvider>().loadStaff();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,18 +54,83 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         backgroundColor: Colors.purple,
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Service Type Input
+
+            // Staff Selection
+            Consumer<StaffProvider>(
+              builder: (context, staffProvider, child) {
+                final activeStaff = staffProvider.activeStaff;
+
+                return DropdownButtonFormField<Staff>(
+                  initialValue: _selectedStaff,
+                  decoration: const InputDecoration(
+                    labelText: 'Staff Member',
+                    hintText: 'Select who performed this service',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person),
+                  ),
+                  items: activeStaff.map((staff) {
+                    return DropdownMenuItem<Staff>(
+                      value: staff,
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.purple.withValues(alpha: 0.2),
+                            child: Text(
+                              staff.initials,
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  staff.name,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                if (staff.specialty != null)
+                                  Text(
+                                    staff.specialty!,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (Staff? newStaff) {
+                    setState(() {
+                      _selectedStaff = newStaff;
+                    });
+                  },
+                  isExpanded: true,
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Notes Section
             TextField(
-              controller: _serviceController,
+              controller: _notesController,
+              maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Service Type',
-                hintText: 'e.g. Hair Cut, Color, Styling...',
+                labelText: 'Notes',
+                hintText: 'Add your notes about the service, products used, client preferences, etc...',
                 border: OutlineInputBorder(),
+                alignLabelWithHint: true,
               ),
             ),
             const SizedBox(height: 16),
@@ -158,24 +234,6 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
             const SizedBox(height: 16),
 
-            // Notes Section
-            Expanded(
-              child: TextField(
-                controller: _notesController,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Add your notes about the service, products used, client preferences, etc...',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
             // Save Button
             ElevatedButton(
               onPressed: _isUploading ? null : _saveVisit,
@@ -209,31 +267,60 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
   }
 
   Future<void> _pickFromCamera() async {
-    final XFile? photo = await _picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.rear,
+      );
 
-    if (photo != null) {
-      setState(() {
-        _selectedImages.add(photo);
-      });
+      if (photo != null && mounted) {
+        setState(() {
+          _selectedImages.add(photo);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Camera error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      print('Camera error: $e'); // For debugging
     }
   }
 
   Future<void> _pickFromGallery() async {
-    final List<XFile> photos = await _picker.pickMultiImage(
-      maxWidth: 1920,
-      maxHeight: 1080,
-      imageQuality: 85,
-    );
+    try {
+      final List<XFile> photos = await _picker.pickMultiImage(
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+        limit: 10, // Limit to prevent memory issues
+      );
 
-    if (photos.isNotEmpty) {
-      setState(() {
-        _selectedImages.addAll(photos);
-      });
+      if (photos.isNotEmpty && mounted) {
+        setState(() {
+          _selectedImages.addAll(photos);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gallery error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      // Consider using a proper logging framework in production
+      print('Gallery error: $e');
     }
   }
 
@@ -258,8 +345,11 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         id: '', // Will be generated by database
         clientId: widget.client.id,
         userId: SupabaseService.currentUser!.id,
+        staffId: _selectedStaff?.id, // Include selected staff member
         visitDate: DateTime.now(),
-        serviceType: _serviceController.text.trim(),
+        serviceType: null, // Service type removed
+        rating: null, // Rating removed
+        loved: false, // Default to not loved
         notes: _notesController.text.trim(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -273,11 +363,14 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
       if (_selectedImages.isNotEmpty) {
         for (int i = 0; i < _selectedImages.length; i++) {
           final imageFile = _selectedImages[i];
-          final imageBytes = await File(imageFile.path).readAsBytes();
+          final originalBytes = await File(imageFile.path).readAsBytes();
 
-          // Upload to storage
+          // Compress image for better storage and performance
+          final compressedBytes = await PhotoService.compressImageBytes(originalBytes);
+
+          // Upload compressed image to storage
           final storagePath = await SupabaseService.uploadPhoto(
-            photoData: imageBytes,
+            photoData: compressedBytes,
             userId: SupabaseService.currentUser!.id,
             visitId: savedVisit.id,
             photoType: PhotoType.front, // For simplicity, all photos are 'front'
@@ -290,7 +383,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
             userId: SupabaseService.currentUser!.id,
             storagePath: storagePath,
             photoType: PhotoType.front,
-            fileSize: imageBytes.length,
+            fileSize: compressedBytes.length, // Use compressed size
             createdAt: DateTime.now(),
           );
 
@@ -298,21 +391,31 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         }
       }
 
-      // For simplicity, we don't refresh the client visits list automatically
-      // The user can navigate back and refresh manually if needed
-
+      // Refresh the visits list to show the new visit immediately
       if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Visit saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // Store context references before async operations to avoid async context warnings
+        final navigator = Navigator.of(context);
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        final visitsProvider = context.read<VisitsProvider>();
+
+        await visitsProvider.refreshVisitsForClient(widget.client.id);
+
+        // Check mounted again after async operation
+        if (mounted) {
+          navigator.pop();
+          scaffoldMessenger.showSnackBar(
+            const SnackBar(
+              content: Text('Visit saved successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        // Store context reference before potential async operations to avoid async context warnings
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text('Error saving visit: $e'),
             backgroundColor: Colors.red,
@@ -331,7 +434,6 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
   @override
   void dispose() {
     _notesController.dispose();
-    _serviceController.dispose();
     super.dispose();
   }
 }

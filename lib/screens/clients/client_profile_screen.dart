@@ -8,6 +8,9 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/cached_image.dart';
+import '../../widgets/common/star_rating.dart';
+import '../loved_styles/loved_styles_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
   final String clientId;
@@ -22,12 +25,65 @@ class ClientProfileScreen extends StatefulWidget {
 }
 
 class _ClientProfileScreenState extends State<ClientProfileScreen> {
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<VisitsProvider>().loadVisitsForClient(widget.clientId);
+      context.read<VisitsProvider>().refreshVisitsForClient(widget.clientId);
+      _preloadImages();
     });
+  }
+
+  void _preloadImages() async {
+    // Wait a bit to let the visits load first
+    await Future.delayed(const Duration(milliseconds: 300)); // Reduced delay
+
+    if (!mounted) return;
+
+    // Preload images in parallel for faster loading
+    final visitsProvider = context.read<VisitsProvider>();
+    final visits = visitsProvider.getVisitsForClient(widget.clientId);
+
+    final cacheManager = ImageCacheManager.instance;
+    final preloadTasks = <Future<void>>[];
+
+    // Create parallel preload tasks for better performance
+    for (final visit in visits) {
+      if (visit.photos != null) {
+        for (final photo in visit.photos!) {
+          final task = _preloadSingleImage(visitsProvider, cacheManager, photo.storagePath);
+          preloadTasks.add(task);
+        }
+      }
+    }
+
+    // Execute all preloading tasks in parallel (limit concurrency to avoid overwhelming)
+    final batches = <List<Future<void>>>[];
+    const batchSize = 10; // Process 10 images at a time
+    for (int i = 0; i < preloadTasks.length; i += batchSize) {
+      final end = (i + batchSize < preloadTasks.length) ? i + batchSize : preloadTasks.length;
+      batches.add(preloadTasks.sublist(i, end));
+    }
+
+    for (final batch in batches) {
+      if (mounted) {
+        await Future.wait(batch);
+        // Small delay between batches to prevent UI blocking
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+    }
+  }
+
+  Future<void> _preloadSingleImage(VisitsProvider visitsProvider, ImageCacheManager cacheManager, String storagePath) async {
+    try {
+      final url = await visitsProvider.getPhotoUrl(storagePath);
+      if (url != null && mounted) {
+        cacheManager.preloadImage(url); // Remove await - this method doesn't return Future
+      }
+    } catch (e) {
+      // Ignore preload errors - don't block other images
+    }
   }
 
   @override
@@ -165,9 +221,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildVisitsList(VisitsProvider visitsProvider, Client client) {
-    final visits = visitsProvider.getVisitsForClient(widget.clientId);
+    final allVisits = visitsProvider.getVisitsForClient(widget.clientId);
 
-    if (visits.isEmpty && !visitsProvider.isLoading) {
+    if (allVisits.isEmpty && !visitsProvider.isLoading) {
       return EmptyState(
         icon: Icons.camera_alt_outlined,
         title: 'No visits yet',
@@ -182,34 +238,138 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(AppTheme.spacingMedium),
-          child: Text(
-            'Recent Visits (${visits.length})',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontSize: 18,
+    // Filter loved visits
+    final lovedVisits = allVisits.where((visit) => visit.loved ?? false).toList();
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          // Tab Bar
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(8.0),
             ),
-          ),
-        ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => visitsProvider.refreshVisitsForClient(widget.clientId),
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppTheme.spacingMedium,
+            child: TabBar(
+              indicator: BoxDecoration(
+                borderRadius: BorderRadius.circular(8.0),
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              itemCount: visits.length,
-              itemBuilder: (context, index) {
-                final visit = visits[index];
-                return _VisitCard(visit: visit);
-              },
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: AppTheme.primaryButtonColor,
+              unselectedLabelColor: AppTheme.secondaryTextColor,
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.normal,
+              ),
+              tabs: [
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.schedule, size: 16),
+                      const SizedBox(width: 6),
+                      Text('Recent (${allVisits.length})'),
+                    ],
+                  ),
+                ),
+                Tab(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.favorite, size: 16),
+                      const SizedBox(width: 6),
+                      Text('Loved (${lovedVisits.length})'),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          // Tab Views
+          Expanded(
+            child: TabBarView(
+              children: [
+                // Recent Visits Tab
+                _buildVisitsTabContent(allVisits, 'recent'),
+                // Loved Visits Tab
+                _buildVisitsTabContent(lovedVisits, 'loved'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVisitsTabContent(List<Visit> visits, String tabType) {
+    if (visits.isEmpty && tabType == 'loved') {
+      return _buildEmptyLovedState();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => context.read<VisitsProvider>().refreshVisitsForClient(widget.clientId),
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppTheme.spacingMedium,
         ),
-      ],
+        itemCount: visits.length,
+        itemBuilder: (context, index) {
+          final visit = visits[index];
+          return _VisitCard(
+            visit: visit,
+            onToggleLoved: _toggleLovedVisit,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyLovedState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.favorite_border,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          Text(
+            'No loved visits yet',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppTheme.secondaryTextColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSmall),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLarge),
+            child: Text(
+              'Tap the heart icon ❤️ on visit cards to mark your favorite results and see them here.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.secondaryTextColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -223,24 +383,52 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   void _showDeleteClientDialog(BuildContext context, Client client) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete Client'),
         content: Text(
           'Are you sure you want to delete ${client.fullName}? This will also delete all their visits and photos. This action cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
-              final success = await context
-                  .read<ClientsProvider>()
-                  .deleteClient(client.id);
-              if (success && mounted) {
-                context.pop(); // Go back to clients list
+              // Store references to avoid context issues
+              final navigator = Navigator.of(dialogContext);
+              final clientsProvider = context.read<ClientsProvider>();
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+              navigator.pop(); // Close dialog first
+
+              try {
+                final success = await clientsProvider.deleteClient(client.id);
+
+                if (!mounted) return; // Early exit if widget disposed
+
+                if (success) {
+                  // Navigate back to clients list
+                  if (context.mounted) {
+                    context.pop();
+                  }
+                } else {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete client'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting client: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             style: TextButton.styleFrom(
@@ -252,12 +440,67 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       ),
     );
   }
+
+  void _toggleLovedVisit(Visit visit) async {
+    try {
+      // Toggle the loved state (null defaults to false)
+      final currentLoved = visit.loved ?? false;
+      final newLoved = !currentLoved;
+      final updatedVisit = visit.copyWith(loved: newLoved);
+
+      // Update in backend
+      final success = await context.read<VisitsProvider>().updateVisitLoved(visit.id, newLoved);
+
+      if (success) {
+        // Clear loved styles cache so it shows updated data
+        LovedStylesScreen.clearCache();
+
+        // Show feedback to user
+        if (mounted) {
+          final scaffoldMessenger = ScaffoldMessenger.of(context);
+          scaffoldMessenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                (updatedVisit.loved ?? false)
+                    ? 'Added to loved visits ❤️'
+                    : 'Removed from loved visits',
+              ),
+              duration: const Duration(seconds: 2),
+              backgroundColor: (updatedVisit.loved ?? false) ? Colors.red[400] : null,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to update visit'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 }
 
 class _VisitCard extends StatelessWidget {
   final Visit visit;
+  final void Function(Visit) onToggleLoved;
 
-  const _VisitCard({required this.visit});
+  const _VisitCard({
+    required this.visit,
+    required this.onToggleLoved,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +508,7 @@ class _VisitCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
       child: InkWell(
         onTap: () {
-          context.goNamed(
+          context.pushNamed(
             'visit_details',
             pathParameters: {'visitId': visit.id},
           );
@@ -285,9 +528,27 @@ class _VisitCard extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: AppTheme.secondaryTextColor,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Heart icon for loved visits
+                      GestureDetector(
+                        onTap: () => onToggleLoved(visit),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            (visit.loved ?? false) ? Icons.favorite : Icons.favorite_border,
+                            color: (visit.loved ?? false) ? Colors.red : AppTheme.secondaryTextColor,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.chevron_right,
+                        color: AppTheme.secondaryTextColor,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -298,6 +559,26 @@ class _VisitCard extends StatelessWidget {
                   color: AppTheme.secondaryTextColor,
                 ),
               ),
+              // Star rating (always on the left) and staff information
+              if (visit.staffId != null || visit.rating != null) ...[
+                const SizedBox(height: AppTheme.spacingSmall),
+                Row(
+                  children: [
+                    // Rating always comes first (left side)
+                    if (visit.rating != null) ...[
+                      StarRating(
+                        rating: visit.rating!,
+                        size: 16.0,
+                        readOnly: true,
+                      ),
+                      const SizedBox(width: AppTheme.spacingSmall),
+                    ],
+                    // Staff information takes remaining space
+                    if (visit.staffId != null)
+                      Expanded(child: _buildStaffInfo(context)),
+                  ],
+                ),
+              ],
               if (visit.photos != null && visit.photos!.isNotEmpty) ...[
                 const SizedBox(height: AppTheme.spacingMedium),
                 _buildPhotoPreview(context, visit.photos!),
@@ -311,13 +592,13 @@ class _VisitCard extends StatelessWidget {
 
   Widget _buildPhotoPreview(BuildContext context, List<Photo> photos) {
     return SizedBox(
-      height: 60,
+      height: 180, // Increased for larger thumbnails
       child: Row(
-        children: photos.take(4).map((photo) {
+        children: photos.take(2).map((photo) { // Showing only 2 images for bigger display
           return Container(
-            width: 60,
-            height: 60,
-            margin: const EdgeInsets.only(right: AppTheme.spacingSmall),
+            width: 180, // Much larger for better visibility
+            height: 180,
+            margin: const EdgeInsets.only(right: AppTheme.spacingMedium),
             child: _buildThumbnail(context, photo),
           );
         }).toList(),
@@ -361,47 +642,75 @@ class _VisitCard extends StatelessWidget {
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-          child: Image.network(
-            snapshot.data!,
-            width: 60,
-            height: 60,
+          child: CachedImage(
+            imageUrl: snapshot.data!,
+            width: 180,
+            height: 180,
             fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryAccentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+            placeholder: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryAccentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-                child: Center(
-                  child: SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded /
-                              loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  ),
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryAccentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-                ),
-                child: const Icon(
-                  Icons.broken_image,
-                  color: AppTheme.secondaryTextColor,
-                  size: 20,
-                ),
-              );
-            },
+              ),
+            ),
+            errorWidget: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryAccentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+              ),
+              child: const Icon(
+                Icons.broken_image,
+                color: AppTheme.secondaryTextColor,
+                size: 30,
+              ),
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStaffInfo(BuildContext context) {
+    return Consumer<StaffProvider>(
+      builder: (context, staffProvider, child) {
+        final staff = staffProvider.getStaffById(visit.staffId!);
+
+        if (staff == null) {
+          return Container(); // Staff not found
+        }
+
+        return Row(
+          children: [
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: AppTheme.primaryAccentColor.withValues(alpha: 0.2),
+              child: Text(
+                staff.initials,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryButtonColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingSmall),
+            Expanded(
+              child: Text(
+                'by ${staff.name}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.secondaryTextColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
