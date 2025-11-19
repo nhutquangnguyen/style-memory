@@ -11,6 +11,8 @@ import '../screens/clients/add_client_screen.dart';
 import '../screens/clients/client_profile_screen.dart';
 import '../screens/simple_photo_notes_screen.dart';
 import '../screens/visits/visit_details_screen.dart';
+import '../screens/gallery/gallery_screen.dart';
+import '../screens/loved_styles/loved_styles_screen.dart';
 import '../screens/settings_screen.dart';
 
 class AppRouter {
@@ -93,6 +95,12 @@ class AppRouter {
             ],
           ),
 
+          // Loved Styles route
+          GoRoute(
+            path: '/loved-styles',
+            name: 'loved_styles',
+            builder: (context, state) => const LovedStylesScreen(),
+          ),
 
           // Settings route
           GoRoute(
@@ -111,6 +119,12 @@ class AppRouter {
           final visitId = state.pathParameters['visitId']!;
           return VisitDetailsScreen(visitId: visitId);
         },
+      ),
+      // Full gallery accessible from settings
+      GoRoute(
+        path: '/gallery',
+        name: 'gallery',
+        builder: (context, state) => const GalleryScreen(),
       ),
     ],
   );
@@ -140,12 +154,9 @@ class MainBottomNavigation extends StatelessWidget {
 
     int selectedIndex = 0;
     if (currentRoute?.startsWith('/clients') == true) {
-      // Check if it's the add client route
-      if (currentRoute == '/clients/add') {
-        selectedIndex = 1; // Add Client tab
-      } else {
-        selectedIndex = 0; // Clients tab
-      }
+      selectedIndex = 0; // Clients tab
+    } else if (currentRoute == '/loved-styles') {
+      selectedIndex = 1; // Loved Styles tab
     } else if (currentRoute?.startsWith('/settings') == true) {
       selectedIndex = 2;
     }
@@ -158,7 +169,7 @@ class MainBottomNavigation extends StatelessWidget {
             context.goNamed('clients');
             break;
           case 1:
-            context.goNamed('add_client');
+            context.go('/loved-styles');
             break;
           case 2:
             context.goNamed('settings');
@@ -171,8 +182,8 @@ class MainBottomNavigation extends StatelessWidget {
           label: 'Clients',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_add),
-          label: 'Add Client',
+          icon: Icon(Icons.favorite),
+          label: 'Loved Styles',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.settings),

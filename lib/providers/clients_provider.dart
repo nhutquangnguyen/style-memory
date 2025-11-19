@@ -9,6 +9,10 @@ class ClientsProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // Cache to prevent unnecessary reloads
+  DateTime? _lastLoadTime;
+  static const Duration _cacheExpiry = Duration(minutes: 5);
+
   List<Client> get clients => _clients;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -34,12 +38,21 @@ class ClientsProvider extends ChangeNotifier {
   }
 
   Future<void> loadClients() async {
+    // Check if we have valid cached data
+    if (_clients.isNotEmpty &&
+        _lastLoadTime != null &&
+        DateTime.now().difference(_lastLoadTime!) < _cacheExpiry) {
+      // Use cached data - no loading needed
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       _clients = await SupabaseService.getClients();
+      _lastLoadTime = DateTime.now(); // Cache the load time
     } catch (e) {
       _errorMessage = 'Failed to load clients: $e';
     }
@@ -77,6 +90,9 @@ class ClientsProvider extends ChangeNotifier {
       final createdClient = await SupabaseService.createClient(client);
       _clients.insert(0, createdClient); // Add to beginning of list
 
+      // Invalidate cache since we added a new client
+      _lastLoadTime = DateTime.now();
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -106,6 +122,9 @@ class ClientsProvider extends ChangeNotifier {
         _clients[index] = updatedClient;
       }
 
+      // Update cache timestamp since we modified data
+      _lastLoadTime = DateTime.now();
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -127,6 +146,9 @@ class ClientsProvider extends ChangeNotifier {
 
       // Remove from local list
       _clients.removeWhere((c) => c.id == clientId);
+
+      // Update cache timestamp since we modified data
+      _lastLoadTime = DateTime.now();
 
       _isLoading = false;
       notifyListeners();
@@ -153,6 +175,14 @@ class ClientsProvider extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    // Force refresh by clearing cache
+    _lastLoadTime = null;
+    await loadClients();
+  }
+
+  // Method to force refresh (clear cache and reload)
+  Future<void> forceRefresh() async {
+    _lastLoadTime = null;
     await loadClients();
   }
 }

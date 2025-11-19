@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
+import 'staff/staff_list_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,6 +28,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _packageInfo = info;
     });
+  }
+
+  void _navigateToStaffManagement(BuildContext context) {
+    // Navigate to staff management screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const StaffListScreen(),
+      ),
+    );
+  }
+
+  void _navigateToFullGallery(BuildContext context) {
+    // Navigate to full gallery screen
+    context.pushNamed('gallery');
   }
 
   @override
@@ -88,6 +103,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   );
                 },
+              ),
+
+              // Management section
+              _buildSectionHeader(context, 'Management'),
+              _buildAccountTile(
+                context,
+                icon: Icons.group_work,
+                title: 'Staff Management',
+                subtitle: 'Manage your team members',
+                onTap: () => _navigateToStaffManagement(context),
+              ),
+              _buildAccountTile(
+                context,
+                icon: Icons.photo_library,
+                title: 'All Photos Gallery',
+                subtitle: 'View all photos with search & filter',
+                onTap: () => _navigateToFullGallery(context),
               ),
 
               // Subscription section (placeholder)

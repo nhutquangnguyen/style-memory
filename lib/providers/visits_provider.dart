@@ -12,6 +12,10 @@ class VisitsProvider extends ChangeNotifier {
   String? _errorMessage;
   bool _isUploading = false;
 
+  // Cache to prevent unnecessary reloads
+  Map<String, DateTime> _lastLoadTimes = {};
+  static const Duration _cacheExpiry = Duration(minutes: 5);
+
   bool get isLoading => _isLoading;
   bool get isUploading => _isUploading;
   String? get errorMessage => _errorMessage;
@@ -21,6 +25,18 @@ class VisitsProvider extends ChangeNotifier {
   }
 
   Future<void> loadVisitsForClient(String clientId) async {
+    // Check if we have valid cached data for this client
+    final lastLoadTime = _lastLoadTimes[clientId];
+    final existingVisits = _visitsByClient[clientId];
+
+    if (existingVisits != null &&
+        existingVisits.isNotEmpty &&
+        lastLoadTime != null &&
+        DateTime.now().difference(lastLoadTime) < _cacheExpiry) {
+      // Use cached data - no loading needed
+      return;
+    }
+
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -28,6 +44,7 @@ class VisitsProvider extends ChangeNotifier {
     try {
       final visits = await SupabaseService.getVisitsForClient(clientId);
       _visitsByClient[clientId] = visits;
+      _lastLoadTimes[clientId] = DateTime.now(); // Cache the load time
     } catch (e) {
       _errorMessage = 'Failed to load visits: $e';
     }
@@ -113,10 +130,13 @@ class VisitsProvider extends ChangeNotifier {
         await SupabaseService.createPhoto(photo);
       }
 
-      // Add to local list
-      if (_visitsByClient.containsKey(clientId)) {
-        _visitsByClient[clientId]!.insert(0, createdVisit);
+      // Add to local list (ensure clientId exists in cache)
+      if (!_visitsByClient.containsKey(clientId)) {
+        _visitsByClient[clientId] = [];
       }
+      _visitsByClient[clientId]!.insert(0, createdVisit);
+      // Update cache timestamp since we added a new visit
+      _lastLoadTimes[clientId] = DateTime.now();
 
       _isUploading = false;
       notifyListeners();
@@ -147,6 +167,8 @@ class VisitsProvider extends ChangeNotifier {
         final index = visits.indexWhere((v) => v.id == visit.id);
         if (index != -1) {
           visits[index] = updatedVisit;
+          // Update cache timestamp since we modified a visit
+          _lastLoadTimes[visit.clientId] = DateTime.now();
         }
       }
 
@@ -157,6 +179,31 @@ class VisitsProvider extends ChangeNotifier {
       _errorMessage = 'Failed to update visit: $e';
       _isLoading = false;
       notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> updateVisitLoved(String visitId, bool loved) async {
+    try {
+      await SupabaseService.updateVisitLoved(visitId, loved);
+
+      // Update in local lists
+      for (final visits in _visitsByClient.values) {
+        final index = visits.indexWhere((v) => v.id == visitId);
+        if (index != -1) {
+          final updatedVisit = visits[index].copyWith(
+            loved: loved,
+            updatedAt: DateTime.now(),
+          );
+          visits[index] = updatedVisit;
+          break;
+        }
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to update visit loved status: $e';
       return false;
     }
   }
@@ -172,6 +219,8 @@ class VisitsProvider extends ChangeNotifier {
       // Remove from local list
       if (_visitsByClient.containsKey(clientId)) {
         _visitsByClient[clientId]!.removeWhere((v) => v.id == visitId);
+        // Update cache timestamp since we removed a visit
+        _lastLoadTimes[clientId] = DateTime.now();
       }
 
       _isLoading = false;
@@ -209,6 +258,15 @@ class VisitsProvider extends ChangeNotifier {
   }
 
   Future<void> refreshVisitsForClient(String clientId) async {
+    // Force refresh by clearing cache for this client
+    _lastLoadTimes.remove(clientId);
     await loadVisitsForClient(clientId);
+  }
+
+  // Method to force refresh all client visits (clear all cache)
+  Future<void> forceRefreshAll() async {
+    _lastLoadTimes.clear();
+    _visitsByClient.clear();
+    notifyListeners();
   }
 }

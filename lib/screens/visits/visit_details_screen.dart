@@ -6,6 +6,8 @@ import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
+import '../../widgets/common/cached_image.dart';
+import '../../widgets/common/star_rating.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
   final String visitId;
@@ -155,7 +157,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
     }
 
     return Container(
-      height: 400,
+      height: 500, // Increased from 400 for better viewing
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
         color: Colors.grey[100],
@@ -181,42 +183,20 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                   bottom: 16,
                   left: 16,
                   right: 16,
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.spacingMedium,
-                          vertical: AppTheme.spacingSmall,
-                        ),
-                        decoration: BoxDecoration(
+                  child: Text(
+                    '${index + 1} / ${photos.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 1),
+                          blurRadius: 2,
                           color: Colors.black54,
-                          borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Text(
-                          photo.photoType.displayName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppTheme.spacingSmall),
-                      Text(
-                        '${index + 1} / ${photos.length}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 1),
-                              blurRadius: 2,
-                              color: Colors.black54,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -268,52 +248,42 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
           );
         }
 
-        return Image.network(
-          snapshot.data!,
+        return CachedImage(
+          imageUrl: snapshot.data!,
           width: double.infinity,
           height: double.infinity,
           fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) return child;
-            return Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.grey[300],
-              child: Center(
-                child: CircularProgressIndicator(
-                  value: loadingProgress.expectedTotalBytes != null
-                      ? loadingProgress.cumulativeBytesLoaded /
-                          loadingProgress.expectedTotalBytes!
-                      : null,
+          placeholder: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.grey[300],
+            child: const Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          errorWidget: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.grey[300],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image,
+                  size: 48,
+                  color: Colors.grey[600],
                 ),
-              ),
-            );
-          },
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: Colors.grey[300],
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.broken_image,
-                    size: 48,
+                const SizedBox(height: 8),
+                Text(
+                  'Image not available',
+                  style: TextStyle(
                     color: Colors.grey[600],
+                    fontSize: 12,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Image not available',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -346,6 +316,14 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                 label: 'Service',
                 value: _visit!.serviceType!,
               ),
+
+            // Staff member information
+            if (_visit!.staffId != null)
+              _buildStaffDetailRow(),
+
+            // Rating information
+            if (_visit!.rating != null)
+              _buildRatingDetailRow(),
 
             if (_visit!.notes != null && _visit!.notes!.isNotEmpty)
               _buildDetailSection(
@@ -450,6 +428,122 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaffDetailRow() {
+    return Consumer<StaffProvider>(
+      builder: (context, staffProvider, child) {
+        final staff = staffProvider.getStaffById(_visit!.staffId!);
+
+        if (staff == null) {
+          return _buildDetailRow(
+            icon: Icons.person_outline,
+            label: 'Staff Member',
+            value: 'Staff not found',
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.person,
+                size: 20,
+                color: AppTheme.secondaryTextColor,
+              ),
+              const SizedBox(width: AppTheme.spacingMedium),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Staff Member',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.secondaryTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingVerySmall),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppTheme.primaryAccentColor.withValues(alpha: 0.2),
+                          child: Text(
+                            staff.initials,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryButtonColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppTheme.spacingSmall),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                staff.name,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              if (staff.specialty != null && staff.specialty!.isNotEmpty)
+                                Text(
+                                  staff.specialty!,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppTheme.secondaryTextColor,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRatingDetailRow() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.star,
+            size: 20,
+            color: AppTheme.secondaryTextColor,
+          ),
+          const SizedBox(width: AppTheme.spacingMedium),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rating',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.secondaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingVerySmall),
+                StarRating(
+                  rating: _visit!.rating!,
+                  size: 20.0,
+                  readOnly: true,
+                ),
+              ],
             ),
           ),
         ],

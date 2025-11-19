@@ -64,11 +64,8 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
       // Clear camera provider
       cameraProvider.resetCapture();
 
-      // Navigate back to client profile
-      context.goNamed(
-        'client_profile',
-        pathParameters: {'clientId': widget.clientId},
-      );
+      // Navigate back to client profile (preserving navigation stack)
+      context.pop();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Visit saved successfully!')),

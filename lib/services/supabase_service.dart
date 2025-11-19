@@ -220,6 +220,16 @@ class SupabaseService {
         .eq('id', visit.id);
   }
 
+  static Future<void> updateVisitLoved(String visitId, bool loved) async {
+    await _client
+        .from('visits')
+        .update({
+          'loved': loved,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', visitId);
+  }
+
   static Future<void> deleteVisit(String visitId) async {
     // Delete photos from storage first
     final photos = await _client
@@ -268,10 +278,44 @@ class SupabaseService {
     return Photo.fromJson(response);
   }
 
+  // URL cache to prevent repeated network calls
+  static final Map<String, String> _urlCache = {};
+  static final Map<String, DateTime> _urlCacheExpiry = {};
+  static const Duration _urlCacheDuration = Duration(minutes: 50); // Cache for 50 minutes (shorter than 1-hour expiry)
+
   static Future<String> getPhotoUrl(String storagePath) async {
-    return _client.storage
+    // Check if we have a valid cached URL
+    final cachedUrl = _urlCache[storagePath];
+    final expiry = _urlCacheExpiry[storagePath];
+
+    if (cachedUrl != null && expiry != null && DateTime.now().isBefore(expiry)) {
+      return cachedUrl;
+    }
+
+    // Generate new signed URL
+    final url = await _client.storage
         .from('client-photos')
         .createSignedUrl(storagePath, 3600); // 1 hour expiry
+
+    // Cache the URL with expiry
+    _urlCache[storagePath] = url;
+    _urlCacheExpiry[storagePath] = DateTime.now().add(_urlCacheDuration);
+
+    return url;
+  }
+
+  // Clear expired URLs from cache (call this periodically)
+  static void cleanupUrlCache() {
+    final now = DateTime.now();
+    final expiredKeys = _urlCacheExpiry.entries
+        .where((entry) => now.isAfter(entry.value))
+        .map((entry) => entry.key)
+        .toList();
+
+    for (final key in expiredKeys) {
+      _urlCache.remove(key);
+      _urlCacheExpiry.remove(key);
+    }
   }
 
   static Future<void> deletePhoto(String photoId, String storagePath) async {

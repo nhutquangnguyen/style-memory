@@ -4,8 +4,11 @@ class Visit {
   final String id;
   final String clientId;
   final String userId;
+  final String? staffId; // ID of the staff member who performed the service
   final DateTime visitDate;
   final String? serviceType;
+  final int? rating; // Rating from 1-5 stars
+  final bool? loved; // Whether this visit result is loved by the client
   final String? notes;
   final String? productsUsed;
   final DateTime createdAt;
@@ -16,8 +19,11 @@ class Visit {
     required this.id,
     required this.clientId,
     required this.userId,
+    this.staffId,
     required this.visitDate,
     this.serviceType,
+    this.rating,
+    this.loved, // Can be null for existing visits
     this.notes,
     this.productsUsed,
     required this.createdAt,
@@ -30,8 +36,11 @@ class Visit {
       id: json['id'] as String,
       clientId: json['client_id'] as String,
       userId: json['user_id'] as String,
+      staffId: json['staff_id'] as String?,
       visitDate: DateTime.parse(json['visit_date'] as String),
       serviceType: json['service_type'] as String?,
+      rating: json['rating'] as int?,
+      loved: json['loved'] as bool? ?? false, // Default to false if null
       notes: json['notes'] as String?,
       productsUsed: json['products_used'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -48,8 +57,11 @@ class Visit {
     final json = <String, dynamic>{
       'client_id': clientId,
       'user_id': userId,
+      if (staffId != null) 'staff_id': staffId,
       'visit_date': visitDate.toIso8601String(),
       'service_type': serviceType,
+      if (rating != null) 'rating': rating,
+      'loved': loved ?? false,
       'notes': notes,
       'products_used': productsUsed,
       'created_at': createdAt.toIso8601String(),
@@ -68,8 +80,11 @@ class Visit {
     String? id,
     String? clientId,
     String? userId,
+    String? staffId,
     DateTime? visitDate,
     String? serviceType,
+    int? rating,
+    bool? loved,
     String? notes,
     String? productsUsed,
     DateTime? createdAt,
@@ -80,8 +95,11 @@ class Visit {
       id: id ?? this.id,
       clientId: clientId ?? this.clientId,
       userId: userId ?? this.userId,
+      staffId: staffId ?? this.staffId,
       visitDate: visitDate ?? this.visitDate,
       serviceType: serviceType ?? this.serviceType,
+      rating: rating ?? this.rating,
+      loved: loved ?? this.loved,
       notes: notes ?? this.notes,
       productsUsed: productsUsed ?? this.productsUsed,
       createdAt: createdAt ?? this.createdAt,
