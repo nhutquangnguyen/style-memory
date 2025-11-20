@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
+import '../../services/share_service.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
   final String visitId;
@@ -81,6 +82,13 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
               ),
               title: Text(client?.fullName ?? 'Visit Details'),
               actions: [
+                // Share button
+                if (_visit!.photos != null && _visit!.photos!.isNotEmpty)
+                  IconButton(
+                    onPressed: _shareVisitPhotos,
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Share Photos',
+                  ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     switch (value) {
@@ -597,5 +605,47 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
         ],
       ),
     );
+  }
+
+  /// Share all photos from this visit
+  Future<void> _shareVisitPhotos() async {
+    if (_visit == null || _visit!.photos == null || _visit!.photos!.isEmpty) {
+      return;
+    }
+
+    try {
+      final visitsProvider = context.read<VisitsProvider>();
+      final List<String> photoUrls = [];
+
+      // Get all photo URLs
+      for (final photo in _visit!.photos!) {
+        final url = await visitsProvider.getPhotoUrl(photo.storagePath);
+        if (url != null) {
+          photoUrls.add(url);
+        }
+      }
+
+      if (photoUrls.isNotEmpty && context.mounted) {
+        // Get the screen size for positioning the share sheet
+        final screenSize = MediaQuery.of(context).size;
+        final sharePosition = Rect.fromLTWH(
+          screenSize.width - 100, // Position near the right edge where the share button is
+          80, // Position near the app bar where the button is
+          50,
+          50,
+        );
+
+        await ShareService.shareVisitPhotos(_visit!, photoUrls, context, sharePositionOrigin: sharePosition);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share photos: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

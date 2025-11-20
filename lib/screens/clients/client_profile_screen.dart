@@ -11,6 +11,7 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
 import '../../widgets/common/modern_button.dart';
+import '../../widgets/common/modern_input.dart';
 import '../loved_styles/loved_styles_screen.dart';
 
 class ClientProfileScreen extends StatefulWidget {
@@ -26,14 +27,25 @@ class ClientProfileScreen extends StatefulWidget {
 }
 
 class _ClientProfileScreenState extends State<ClientProfileScreen> {
+  // Search and filter state
+  final TextEditingController _searchController = TextEditingController();
+  String? _selectedServiceId;
+  bool _showSearchBar = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VisitsProvider>().refreshVisitsForClient(widget.clientId);
+      context.read<ServiceProvider>().loadServices();
       _preloadImages();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _preloadImages() async {
@@ -108,6 +120,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             appBar: AppBar(
               title: Text(client.fullName),
               actions: [
+                IconButton(
+                  onPressed: _toggleSearchBar,
+                  icon: Icon(_showSearchBar ? Icons.search_off : Icons.search),
+                  tooltip: _showSearchBar ? 'Hide Search' : 'Search Visits',
+                ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     switch (value) {
@@ -144,6 +161,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                       onRetry: () => visitsProvider.refreshVisitsForClient(widget.clientId),
                     ),
                   ),
+
+                // Search bar
+                if (_showSearchBar) _buildSearchBar(),
 
                 // Visits section
                 Expanded(
@@ -187,8 +207,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
       );
     }
 
-    // Filter loved visits
-    final lovedVisits = allVisits.where((visit) => visit.loved ?? false).toList();
+    // Apply search filters if active
+    final filteredVisits = _applyVisitFilters(allVisits);
+    final filteredLovedVisits = filteredVisits.where((visit) => visit.loved ?? false).toList();
 
     return DefaultTabController(
       length: 2,
@@ -246,7 +267,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                         size: AppTheme.iconSm,
                       ),
                       const SizedBox(width: AppTheme.spacingSm),
-                      Text('Recent (${allVisits.length})'),
+                      Text('Recent (${filteredVisits.length})'),
                     ],
                   ),
                 ),
@@ -260,7 +281,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                         size: AppTheme.iconSm,
                       ),
                       const SizedBox(width: AppTheme.spacingSm),
-                      Text('Loved (${lovedVisits.length})'),
+                      Text('Loved (${filteredLovedVisits.length})'),
                     ],
                   ),
                 ),
@@ -273,9 +294,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             child: TabBarView(
               children: [
                 // Recent Visits Tab
-                _buildVisitsTabContent(allVisits, 'recent'),
+                _buildVisitsTabContent(filteredVisits, 'recent'),
                 // Loved Visits Tab
-                _buildVisitsTabContent(lovedVisits, 'loved'),
+                _buildVisitsTabContent(filteredLovedVisits, 'loved'),
               ],
             ),
           ),
@@ -284,9 +305,171 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
+  List<Visit> _applyVisitFilters(List<Visit> visits) {
+    if (!_showSearchBar) return visits;
+
+    return visits.where((visit) {
+      // Apply service filter
+      if (_selectedServiceId != null && _selectedServiceId!.isNotEmpty) {
+        if (visit.serviceId != _selectedServiceId) {
+          return false;
+        }
+      }
+
+      // Apply notes search filter
+      final searchQuery = _searchController.text.toLowerCase().trim();
+      if (searchQuery.isNotEmpty) {
+        final notesMatch = visit.notes?.toLowerCase().contains(searchQuery) ?? false;
+        final serviceNameMatch = visit.serviceName?.toLowerCase().contains(searchQuery) ?? false;
+
+        if (!notesMatch && !serviceNameMatch) {
+          return false;
+        }
+      }
+
+      return true;
+    }).toList();
+  }
+
+  void _toggleSearchBar() {
+    setState(() {
+      _showSearchBar = !_showSearchBar;
+      if (!_showSearchBar) {
+        _searchController.clear();
+        _selectedServiceId = null;
+      }
+    });
+  }
+
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() {
+      _selectedServiceId = null;
+    });
+  }
+
+  List<Service> _getAvailableServices() {
+    final visitsProvider = context.read<VisitsProvider>();
+    final allVisits = visitsProvider.getVisitsForClient(widget.clientId);
+
+    // Get unique service IDs from visits
+    final serviceIds = allVisits
+        .map((v) => v.serviceId)
+        .where((id) => id != null && id.isNotEmpty)
+        .toSet();
+
+    final serviceProvider = context.read<ServiceProvider>();
+    return serviceProvider.services
+        .where((service) => serviceIds.contains(service.id))
+        .toList();
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.borderColor,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Search input for notes
+          ModernInput(
+            controller: _searchController,
+            label: 'Search by notes or service',
+            hint: 'Enter search terms...',
+            prefixIcon: const Icon(Icons.search),
+            onChanged: (_) => setState(() {}), // Trigger rebuild for filtering
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.clear),
+                  )
+                : null,
+          ),
+
+          const SizedBox(height: AppTheme.spacingMedium),
+
+          // Service filter
+          Consumer<ServiceProvider>(
+            builder: (context, serviceProvider, child) {
+              final availableServices = _getAvailableServices();
+
+              if (availableServices.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Row(
+                children: [
+                  const Icon(
+                    Icons.design_services,
+                    size: 20,
+                    color: AppTheme.secondaryTextColor,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingMedium,
+                        vertical: AppTheme.spacingSmall,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.borderColor),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedServiceId,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        hint: const Text('Filter by service'),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('All Services'),
+                          ),
+                          ...availableServices.map((service) => DropdownMenuItem<String>(
+                            value: service.id,
+                            child: Text(service.name),
+                          )),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedServiceId = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  IconButton(
+                    onPressed: _clearFilters,
+                    icon: const Icon(Icons.clear_all),
+                    tooltip: 'Clear Filters',
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVisitsTabContent(List<Visit> visits, String tabType) {
-    if (visits.isEmpty && tabType == 'loved') {
-      return _buildEmptyLovedState();
+    if (visits.isEmpty) {
+      if (tabType == 'loved') {
+        return _buildEmptyLovedState();
+      } else {
+        return _buildEmptyRecentState();
+      }
     }
 
     return RefreshIndicator(
@@ -308,18 +491,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   Widget _buildEmptyLovedState() {
+    final isFiltered = _showSearchBar && (_searchController.text.isNotEmpty || _selectedServiceId != null);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.favorite_border,
+            isFiltered ? Icons.search_off : Icons.favorite_border,
             size: 64,
             color: Colors.grey[400],
           ),
           const SizedBox(height: AppTheme.spacingMedium),
           Text(
-            'No loved visits yet',
+            isFiltered ? 'No loved visits found' : 'No loved visits yet',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
               color: AppTheme.secondaryTextColor,
               fontWeight: FontWeight.w500,
@@ -329,13 +514,69 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLarge),
             child: Text(
-              'Tap the heart icon ❤️ on visit cards to mark your favorite results and see them here.',
+              isFiltered
+                  ? 'Try adjusting your search criteria or clear filters to see more loved visits.'
+                  : 'Tap the heart icon ❤️ on visit cards to mark your favorite results and see them here.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppTheme.secondaryTextColor,
               ),
             ),
           ),
+          if (isFiltered) ...[
+            const SizedBox(height: AppTheme.spacingMedium),
+            ElevatedButton.icon(
+              onPressed: _clearFilters,
+              icon: const Icon(Icons.clear_all),
+              label: const Text('Clear Filters'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyRecentState() {
+    final isFiltered = _showSearchBar && (_searchController.text.isNotEmpty || _selectedServiceId != null);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isFiltered ? Icons.search_off : Icons.camera_alt_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+          Text(
+            isFiltered ? 'No visits found' : 'No visits yet',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppTheme.secondaryTextColor,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSmall),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLarge),
+            child: Text(
+              isFiltered
+                  ? 'Try adjusting your search criteria or clear filters to see more visits.'
+                  : 'Start by capturing photos for this client\'s first visit.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.secondaryTextColor,
+              ),
+            ),
+          ),
+          if (isFiltered) ...[
+            const SizedBox(height: AppTheme.spacingMedium),
+            ElevatedButton.icon(
+              onPressed: _clearFilters,
+              icon: const Icon(Icons.clear_all),
+              label: const Text('Clear Filters'),
+            ),
+          ],
         ],
       ),
     );
@@ -683,4 +924,5 @@ class _VisitCard extends StatelessWidget {
       },
     );
   }
+
 }

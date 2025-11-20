@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../widgets/common/modern_input.dart';
 
 class LovedStylesScreen extends StatefulWidget {
   const LovedStylesScreen({super.key});
@@ -24,8 +25,14 @@ class LovedStylesScreen extends StatefulWidget {
 
 class _LovedStylesScreenState extends State<LovedStylesScreen> {
   List<PhotoWithContext> _lovedPhotos = [];
+  List<PhotoWithContext> _filteredPhotos = [];
   bool _isLoading = true;
   String? _errorMessage;
+
+  // Search and filter state
+  final TextEditingController _searchController = TextEditingController();
+  String? _selectedServiceId;
+  bool _showSearchBar = false;
 
   // Cache to prevent unnecessary reloads
   static List<PhotoWithContext>? _cachedLovedPhotos;
@@ -35,10 +42,24 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     // Defer loading until after the build phase completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadLovedStyles();
+      // Also load services for filtering
+      context.read<ServiceProvider>().loadServices();
     });
+  }
+
+  @override
+  void dispose() {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    _applyFilters();
   }
 
   Future<void> _loadLovedStyles() async {
@@ -50,6 +71,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
         _lovedPhotos = _cachedLovedPhotos!;
         _isLoading = false;
       });
+      _applyFilters();
       return;
     }
 
@@ -100,6 +122,9 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
         _isLoading = false;
       });
 
+      // Apply current filters
+      _applyFilters();
+
       // Cache the results for future tab switches
       _cachedLovedPhotos = lovedPhotos;
       _lastCacheTime = DateTime.now();
@@ -111,6 +136,65 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
     }
   }
 
+  void _applyFilters() {
+    if (!mounted) return;
+
+    setState(() {
+      _filteredPhotos = _lovedPhotos.where((photoWithContext) {
+        final client = photoWithContext.client;
+        final visit = photoWithContext.visit;
+
+        // Apply search filter (client name)
+        final searchQuery = _searchController.text.toLowerCase().trim();
+        if (searchQuery.isNotEmpty) {
+          final clientName = client.fullName.toLowerCase();
+          if (!clientName.contains(searchQuery)) {
+            return false;
+          }
+        }
+
+        // Apply service filter
+        if (_selectedServiceId != null && _selectedServiceId!.isNotEmpty) {
+          if (visit.serviceId != _selectedServiceId) {
+            return false;
+          }
+        }
+
+        return true;
+      }).toList();
+    });
+  }
+
+  void _toggleSearchBar() {
+    setState(() {
+      _showSearchBar = !_showSearchBar;
+      if (!_showSearchBar) {
+        _searchController.clear();
+        _selectedServiceId = null;
+      }
+    });
+  }
+
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() {
+      _selectedServiceId = null;
+    });
+  }
+
+  List<Service> _getAvailableServices() {
+    // Get unique services from loved visits
+    final serviceIds = _lovedPhotos
+        .map((p) => p.visit.serviceId)
+        .where((id) => id != null && id.isNotEmpty)
+        .toSet();
+
+    final serviceProvider = context.read<ServiceProvider>();
+    return serviceProvider.services
+        .where((service) => serviceIds.contains(service.id))
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LoadingOverlay(
@@ -120,6 +204,11 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
           title: Text('Loved Styles (${_getLovedVisitsCount()})'),
           automaticallyImplyLeading: false,
           actions: [
+            IconButton(
+              onPressed: _toggleSearchBar,
+              icon: Icon(_showSearchBar ? Icons.search_off : Icons.search),
+              tooltip: _showSearchBar ? 'Hide Search' : 'Search Styles',
+            ),
             IconButton(
               onPressed: () {
                 // Clear cache and force refresh
@@ -142,7 +231,8 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                   onRetry: _loadLovedStyles,
                 ),
               ),
-            if (_lovedPhotos.isEmpty && !_isLoading)
+            if (_showSearchBar) _buildSearchBar(),
+            if ((_showSearchBar ? _filteredPhotos : _lovedPhotos).isEmpty && !_isLoading)
               _buildEmptyState()
             else
               Expanded(
@@ -158,19 +248,21 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isFiltered = _showSearchBar && (_searchController.text.isNotEmpty || _selectedServiceId != null);
+
     return Expanded(
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.favorite_border,
+              isFiltered ? Icons.search_off : Icons.favorite_border,
               size: 64,
               color: Colors.grey[400],
             ),
             const SizedBox(height: AppTheme.spacingMedium),
             Text(
-              'No loved styles yet',
+              isFiltered ? 'No results found' : 'No loved styles yet',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 color: AppTheme.secondaryTextColor,
                 fontWeight: FontWeight.w500,
@@ -180,7 +272,9 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLarge),
               child: Text(
-                'Start marking your best work by tapping the ❤️ on visit cards. Your loved styling sessions will appear here as inspiration cards for future appointments.',
+                isFiltered
+                    ? 'Try adjusting your search criteria or clear filters to see more results.'
+                    : 'Start marking your best work by tapping the ❤️ on visit cards. Your loved styling sessions will appear here as inspiration cards for future appointments.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppTheme.secondaryTextColor,
@@ -188,10 +282,11 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
               ),
             ),
             const SizedBox(height: AppTheme.spacingLarge),
-            ElevatedButton.icon(
-              onPressed: () => context.goNamed('clients'),
-              icon: const Icon(Icons.favorite),
-              label: const Text('Create Loved Styles'),
+            if (!isFiltered)
+              ElevatedButton.icon(
+                onPressed: () => context.goNamed('clients'),
+                icon: const Icon(Icons.favorite),
+                label: const Text('Create Loved Styles'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryButtonColor,
                 foregroundColor: Colors.white,
@@ -203,6 +298,102 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.borderColor,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Search input
+          ModernInput(
+            controller: _searchController,
+            label: 'Search by client name',
+            hint: 'Enter client name...',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    onPressed: () => _searchController.clear(),
+                    icon: const Icon(Icons.clear),
+                  )
+                : null,
+          ),
+
+          const SizedBox(height: AppTheme.spacingMedium),
+
+          // Service filter
+          Consumer<ServiceProvider>(
+            builder: (context, serviceProvider, child) {
+              final availableServices = _getAvailableServices();
+
+              if (availableServices.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return Row(
+                children: [
+                  const Icon(
+                    Icons.design_services,
+                    size: 20,
+                    color: AppTheme.secondaryTextColor,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppTheme.spacingMedium,
+                        vertical: AppTheme.spacingSmall,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: AppTheme.borderColor),
+                        borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                      ),
+                      child: DropdownButton<String>(
+                        value: _selectedServiceId,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        hint: const Text('Filter by service'),
+                        items: [
+                          const DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('All Services'),
+                          ),
+                          ...availableServices.map((service) => DropdownMenuItem<String>(
+                            value: service.id,
+                            child: Text(service.name),
+                          )),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedServiceId = value;
+                          });
+                          _applyFilters();
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppTheme.spacingSmall),
+                  IconButton(
+                    onPressed: _clearFilters,
+                    icon: const Icon(Icons.clear_all),
+                    tooltip: 'Clear Filters',
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -220,8 +411,9 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
 
   List<Visit> _getUniqueVisits() {
     // Group photos by visit and return unique visits
+    final photosToUse = _showSearchBar ? _filteredPhotos : _lovedPhotos;
     final Map<String, Visit> visitMap = {};
-    for (final photoContext in _lovedPhotos) {
+    for (final photoContext in photosToUse) {
       visitMap[photoContext.visit.id] = photoContext.visit;
     }
     final visits = visitMap.values.toList();
@@ -231,7 +423,8 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
   }
 
   List<PhotoWithContext> _getPhotosForVisit(Visit visit) {
-    return _lovedPhotos.where((photo) => photo.visit.id == visit.id).toList();
+    final photosToUse = _showSearchBar ? _filteredPhotos : _lovedPhotos;
+    return photosToUse.where((photo) => photo.visit.id == visit.id).toList();
   }
 
   int _getLovedVisitsCount() {
@@ -358,6 +551,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
       ),
     );
   }
+
 
 }
 
