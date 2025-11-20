@@ -118,20 +118,19 @@ class Visit {
     final now = DateTime.now();
     final difference = now.difference(visitDate);
 
+    // Format time as HH:MM
+    final timeStr = '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
+
     if (difference.inDays == 0) {
-      return 'Today';
+      return 'Today at $timeStr';
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return 'Yesterday at $timeStr';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inDays < 14) {
-      return '1 week ago';
-    } else if (difference.inDays < 30) {
-      return '${(difference.inDays / 7).floor()} weeks ago';
-    } else if (difference.inDays < 60) {
-      return '1 month ago';
+      // Show actual date for recent visits
+      return '${visitDate.day}/${visitDate.month}/${visitDate.year} at $timeStr';
     } else {
-      return '${(difference.inDays / 30).floor()} months ago';
+      // For older visits, show date without time for cleaner display
+      return '${visitDate.day}/${visitDate.month}/${visitDate.year}';
     }
   }
 

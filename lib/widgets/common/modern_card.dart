@@ -8,11 +8,11 @@ class ModernCard extends StatelessWidget {
     required this.child,
     this.padding,
     this.margin,
-    this.elevation = AppTheme.elevationLow,
+    this.elevation = AppTheme.elevationMedium,
     this.borderRadius,
     this.backgroundColor,
     this.borderColor,
-    this.borderWidth = 0,
+    this.borderWidth = 1,
     this.onTap,
     this.shadow,
     this.gradient,
@@ -49,7 +49,7 @@ class ModernCard extends StatelessWidget {
         borderRadius: effectiveBorderRadius,
         border: borderWidth > 0
           ? Border.all(
-              color: borderColor ?? AppTheme.borderColor,
+              color: borderColor ?? AppTheme.borderLightColor,
               width: borderWidth,
             )
           : null,
@@ -92,7 +92,7 @@ class ModernHeaderCard extends StatelessWidget {
     this.headerPadding,
     this.contentPadding,
     this.margin,
-    this.elevation = AppTheme.elevationLow,
+    this.elevation = AppTheme.elevationMedium,
     this.borderRadius,
     this.backgroundColor,
     this.onTap,

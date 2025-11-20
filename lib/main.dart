@@ -48,6 +48,7 @@ class StyleMemoryApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ClientsProvider()),
         ChangeNotifierProvider(create: (_) => ServiceProvider()),
         ChangeNotifierProvider(create: (_) => StaffProvider()),
+        ChangeNotifierProvider(create: (_) => StoreProvider()),
         ChangeNotifierProvider(create: (_) => VisitsProvider()),
         ChangeNotifierProvider(create: (_) => CameraProvider()),
       ],

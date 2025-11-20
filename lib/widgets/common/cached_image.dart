@@ -102,10 +102,22 @@ class ImageCacheManager {
     }
   }
 
-  // Preload multiple images in sequence
+  // Preload multiple images in parallel
   void preloadImages(List<String> urls) {
     for (final url in urls) {
       preloadImage(url);
+    }
+  }
+
+  // Preload multiple images in parallel with explicit Future handling
+  Future<void> preloadImagesParallel(List<String> urls) async {
+    final futures = urls
+        .where((url) => !_memoryCache.containsKey(url) && !_loadingCache.containsKey(url))
+        .map((url) => loadImage(url))
+        .toList();
+
+    if (futures.isNotEmpty) {
+      await Future.wait(futures);
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
+import '../../widgets/photo_gallery_viewer.dart';
 import '../../services/share_service.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class VisitDetailsScreen extends StatefulWidget {
 class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   Visit? _visit;
   bool _isLoading = true;
+  Set<String> _selectedPhotoIds = {};
+  bool _isSelectionMode = false;
 
   @override
   void initState() {
@@ -34,6 +38,11 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
 
   Future<void> _loadVisit() async {
     final visitsProvider = context.read<VisitsProvider>();
+    final staffProvider = context.read<StaffProvider>();
+
+    // Load staff data for proper name resolution
+    await staffProvider.loadStaff();
+
     final visit = await visitsProvider.getVisit(widget.visitId);
 
     if (mounted) {
@@ -80,15 +89,28 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                   }
                 },
               ),
-              title: Text(client?.fullName ?? 'Visit Details'),
+              title: _isSelectionMode
+                ? Text('${_selectedPhotoIds.length} photo${_selectedPhotoIds.length != 1 ? 's' : ''} selected')
+                : Text(client?.fullName ?? 'Visit Details'),
               actions: [
-                // Share button
+                // Share button - always visible when photos exist
                 if (_visit!.photos != null && _visit!.photos!.isNotEmpty)
                   IconButton(
-                    onPressed: _shareVisitPhotos,
+                    onPressed: _sharePhotos,
                     icon: const Icon(Icons.share),
-                    tooltip: 'Share Photos',
+                    tooltip: _selectedPhotoIds.isEmpty
+                      ? 'Share All Photos'
+                      : 'Share Selected Photos (${_selectedPhotoIds.length})',
                   ),
+
+                if (_isSelectionMode) ...[
+                  // Cancel selection mode
+                  IconButton(
+                    onPressed: _exitSelectionMode,
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Cancel',
+                  ),
+                ] else
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     switch (value) {
@@ -141,7 +163,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
       return Container(
         height: 300,
         decoration: BoxDecoration(
-          color: AppTheme.primaryAccentColor.withOpacity(0.1),
+          color: AppTheme.primaryAccentColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
         ),
         child: const Center(
@@ -164,54 +186,105 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
       );
     }
 
-    return Container(
-      height: 500, // Increased from 400 for better viewing
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-        color: Colors.grey[100],
-      ),
-      child: PageView.builder(
-        itemCount: photos.length,
-        itemBuilder: (context, index) {
-          final photo = photos[index];
-          return Container(
-            margin: const EdgeInsets.all(AppTheme.spacingSmall),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Photos header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Photos (${photos.length})',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            child: Stack(
-              children: [
-                // Photo image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-                  child: _buildPhotoImage(photo),
+            if (photos.isNotEmpty && _isSelectionMode)
+              Text(
+                '${_selectedPhotoIds.length} selected',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppTheme.secondaryTextColor,
                 ),
-                // Overlay with photo info
-                Positioned(
-                  bottom: 16,
-                  left: 16,
-                  right: 16,
-                  child: Text(
-                    '${index + 1} / ${photos.length}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 2,
-                          color: Colors.black54,
-                        ),
-                      ],
-                    ),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacingMedium),
+
+        // Photo grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            crossAxisSpacing: AppTheme.spacingSmall,
+            mainAxisSpacing: AppTheme.spacingSmall,
+            childAspectRatio: 1.0,
+          ),
+          itemCount: photos.length,
+          itemBuilder: (context, index) {
+            final photo = photos[index];
+            final isSelected = _selectedPhotoIds.contains(photo.id);
+
+            return GestureDetector(
+              onTap: _isSelectionMode
+                ? () => _togglePhotoSelection(photo.id)
+                : () => _openPhotoGallery(index),
+              onLongPress: () => _enterSelectionMode(photo.id),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                  border: Border.all(
+                    color: isSelected ? AppTheme.primaryButtonColor : Colors.transparent,
+                    width: 3,
                   ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
+                child: Stack(
+                  children: [
+                    // Photo image
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                      child: _buildPhotoImage(photo),
+                    ),
+
+                    // Selection overlay (only in selection mode)
+                    if (_isSelectionMode && isSelected)
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                          color: AppTheme.primaryButtonColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+
+                    // Selection checkbox (only in selection mode)
+                    if (_isSelectionMode)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.primaryButtonColor : Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? AppTheme.primaryButtonColor : Colors.grey,
+                              width: 2,
+                            ),
+                          ),
+                          child: Icon(
+                            isSelected ? Icons.check : null,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -319,10 +392,15 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             ),
 
             if (_visit!.serviceId != null && _visit!.serviceId!.isNotEmpty)
-              _buildDetailRow(
-                icon: Icons.design_services,
-                label: 'Service',
-                value: 'Service selected', // TODO: Resolve service name from serviceId
+              Consumer<ServiceProvider>(
+                builder: (context, serviceProvider, child) {
+                  final service = serviceProvider.getServiceById(_visit!.serviceId!);
+                  return _buildDetailRow(
+                    icon: Icons.design_services,
+                    label: 'Service',
+                    value: service?.name ?? 'Service selected',
+                  );
+                },
               ),
 
             // Staff member information
@@ -607,8 +685,58 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
     );
   }
 
-  /// Share all photos from this visit
-  Future<void> _shareVisitPhotos() async {
+  /// Enter selection mode by long pressing a photo
+  void _enterSelectionMode(String photoId) {
+    // Add haptic feedback for long press
+    HapticFeedback.mediumImpact();
+
+    setState(() {
+      _isSelectionMode = true;
+      _selectedPhotoIds.add(photoId);
+    });
+  }
+
+  /// Exit selection mode
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedPhotoIds.clear();
+    });
+  }
+
+  /// Toggle selection of a specific photo
+  void _togglePhotoSelection(String photoId) {
+    setState(() {
+      if (_selectedPhotoIds.contains(photoId)) {
+        _selectedPhotoIds.remove(photoId);
+      } else {
+        _selectedPhotoIds.add(photoId);
+      }
+
+      // Exit selection mode if no photos are selected
+      if (_selectedPhotoIds.isEmpty) {
+        _isSelectionMode = false;
+      }
+    });
+  }
+
+  /// Open photo gallery viewer at specific index
+  void _openPhotoGallery(int index) {
+    if (_visit?.photos == null || _visit!.photos!.isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => PhotoGalleryViewer(
+          photos: _visit!.photos!,
+          initialIndex: index,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+  }
+
+  /// Share photos - all photos if none selected, or only selected photos
+  Future<void> _sharePhotos() async {
     if (_visit == null || _visit!.photos == null || _visit!.photos!.isEmpty) {
       return;
     }
@@ -617,8 +745,13 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
       final visitsProvider = context.read<VisitsProvider>();
       final List<String> photoUrls = [];
 
-      // Get all photo URLs
-      for (final photo in _visit!.photos!) {
+      // Determine which photos to share
+      final photosToShare = _selectedPhotoIds.isEmpty
+        ? _visit!.photos!  // Share all if none selected
+        : _visit!.photos!.where((p) => _selectedPhotoIds.contains(p.id)); // Share only selected
+
+      // Get URLs for the photos to share
+      for (final photo in photosToShare) {
         final url = await visitsProvider.getPhotoUrl(photo.storagePath);
         if (url != null) {
           photoUrls.add(url);

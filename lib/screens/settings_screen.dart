@@ -22,6 +22,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadPackageInfo();
+    // Initialize store provider after the build phase
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeStoreProvider();
+    });
+  }
+
+  Future<void> _initializeStoreProvider() async {
+    if (!mounted) return;
+
+    // Initialize store provider if not already done
+    final storeProvider = context.read<StoreProvider>();
+    if (!storeProvider.isStoreInfoCustomized && !storeProvider.isLoading) {
+      await storeProvider.initialize();
+    }
   }
 
   Future<void> _loadPackageInfo() async {
@@ -49,10 +63,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _navigateToFullGallery(BuildContext context) {
-    // Navigate to full gallery screen
-    context.pushNamed('gallery');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,29 +96,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
               ],
 
-              // Storage section
-              _buildSectionHeader(context, 'Storage'),
-              Consumer2<ClientsProvider, VisitsProvider>(
-                builder: (context, clientsProvider, visitsProvider, child) {
+              // Store Information section
+              _buildSectionHeader(context, 'Store Information'),
+              Consumer<StoreProvider>(
+                builder: (context, storeProvider, child) {
                   return Column(
                     children: [
-                      _buildInfoTile(
+                      _buildAccountTile(
                         context,
-                        icon: Icons.people_outline,
-                        title: 'Total Clients',
-                        subtitle: '${clientsProvider.clients.length}',
+                        icon: Icons.store_outlined,
+                        title: 'Store Name',
+                        subtitle: storeProvider.storeInfo.name.isNotEmpty
+                          ? storeProvider.storeInfo.name
+                          : 'Tap to add store name',
+                        onTap: () => _showEditStoreNameDialog(context),
                       ),
-                      _buildInfoTile(
+                      _buildAccountTile(
                         context,
-                        icon: Icons.photo_library_outlined,
-                        title: 'Total Photos',
-                        subtitle: _calculateTotalPhotos(visitsProvider).toString(),
+                        icon: Icons.phone_outlined,
+                        title: 'Phone',
+                        subtitle: storeProvider.storeInfo.phone.isNotEmpty
+                          ? storeProvider.storeInfo.phone
+                          : 'Tap to add phone number',
+                        onTap: () => _showEditStorePhoneDialog(context),
                       ),
-                      _buildInfoTile(
+                      _buildAccountTile(
                         context,
-                        icon: Icons.storage_outlined,
-                        title: 'Storage Usage',
-                        subtitle: 'Coming soon',
+                        icon: Icons.location_on_outlined,
+                        title: 'Address',
+                        subtitle: storeProvider.storeInfo.address.isNotEmpty
+                          ? storeProvider.storeInfo.address
+                          : 'Tap to add address',
+                        onTap: () => _showEditStoreAddressDialog(context),
                       ),
                     ],
                   );
@@ -130,13 +149,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Service Management',
                 subtitle: 'Manage your services and pricing',
                 onTap: () => _navigateToServiceManagement(context),
-              ),
-              _buildAccountTile(
-                context,
-                icon: Icons.photo_library,
-                title: 'All Photos Gallery',
-                subtitle: 'View all photos with search & filter',
-                onTap: () => _navigateToFullGallery(context),
               ),
 
               // Subscription section (placeholder)
@@ -303,11 +315,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  int _calculateTotalPhotos(VisitsProvider visitsProvider) {
-    // This is a simplified calculation
-    // In a real app, you'd want to track this more accurately
-    return 0; // TODO: Calculate actual photo count
-  }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
@@ -347,6 +354,151 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showEditEmailDialog(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Edit email feature coming soon')),
+    );
+  }
+
+  void _showEditStoreNameDialog(BuildContext context) {
+    final storeProvider = context.read<StoreProvider>();
+    final controller = TextEditingController(text: storeProvider.storeInfo.name);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Store Name'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Store Name',
+            hintText: 'Enter your store name',
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                try {
+                  await storeProvider.updateStoreName(newName);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Store name updated successfully')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to update store name: $e')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditStorePhoneDialog(BuildContext context) {
+    final storeProvider = context.read<StoreProvider>();
+    final controller = TextEditingController(text: storeProvider.storeInfo.phone);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Phone Number'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Phone Number',
+            hintText: 'Enter your phone number',
+          ),
+          keyboardType: TextInputType.phone,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newPhone = controller.text.trim();
+              try {
+                await storeProvider.updateStorePhone(newPhone);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Phone number updated successfully')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update phone number: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditStoreAddressDialog(BuildContext context) {
+    final storeProvider = context.read<StoreProvider>();
+    final controller = TextEditingController(text: storeProvider.storeInfo.address);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Address'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Address',
+            hintText: 'Enter your store address',
+          ),
+          textCapitalization: TextCapitalization.words,
+          maxLines: 3,
+          minLines: 1,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newAddress = controller.text.trim();
+              try {
+                await storeProvider.updateStoreAddress(newAddress);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Address updated successfully')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update address: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
   }
 

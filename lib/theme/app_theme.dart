@@ -32,9 +32,9 @@ class AppTheme {
   static const Color borderDarkColor = Color(0xFFD1D5DB); // Medium border
 
   // Shadow colors
-  static const Color shadowColor = Color(0x1A000000); // 10% black
-  static const Color shadowLightColor = Color(0x0D000000); // 5% black
-  static const Color shadowDarkColor = Color(0x26000000); // 15% black
+  static const Color shadowColor = Color(0x26000000); // 15% black (increased from 10%)
+  static const Color shadowLightColor = Color(0x1A000000); // 10% black (increased from 5%)
+  static const Color shadowDarkColor = Color(0x33000000); // 20% black (increased from 15%)
 
   // Spacing System - Enhanced scale
   static const double spacingXs = 2.0;
@@ -63,10 +63,10 @@ class AppTheme {
 
   // Elevation System
   static const double elevationNone = 0.0;
-  static const double elevationLow = 2.0;
-  static const double elevationMedium = 4.0;
-  static const double elevationHigh = 8.0;
-  static const double elevationVeryHigh = 16.0;
+  static const double elevationLow = 3.0; // Increased from 2.0
+  static const double elevationMedium = 6.0; // Increased from 4.0
+  static const double elevationHigh = 12.0; // Increased from 8.0
+  static const double elevationVeryHigh = 20.0; // Increased from 16.0
 
   // Icon Sizes
   static const double iconXs = 12.0;
@@ -235,11 +235,12 @@ class AppTheme {
       // Enhanced Card theme with better shadows
       cardTheme: CardThemeData(
         color: cardColor,
-        elevation: elevationLow,
+        elevation: elevationMedium, // Increased from elevationLow
         shadowColor: shadowColor,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(borderRadiusLarge),
+          side: BorderSide(color: borderLightColor, width: 1), // Added subtle border
         ),
         margin: const EdgeInsets.symmetric(
           horizontal: spacingMedium,
@@ -565,8 +566,8 @@ class AppTheme {
 
   static BoxShadow get cardShadow => BoxShadow(
     color: shadowColor,
-    offset: const Offset(0, 2),
-    blurRadius: 8,
+    offset: const Offset(0, 4), // Increased from 2
+    blurRadius: 12, // Increased from 8
     spreadRadius: 0,
   );
 

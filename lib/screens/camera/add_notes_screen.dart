@@ -262,9 +262,9 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Today';
+      return 'Today (${date.day}/${date.month}/${date.year})';
     } else if (difference.inDays == 1) {
-      return 'Yesterday';
+      return 'Yesterday (${date.day}/${date.month}/${date.year})';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

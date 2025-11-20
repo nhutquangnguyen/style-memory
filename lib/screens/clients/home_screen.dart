@@ -396,13 +396,6 @@ class _ModernClientCard extends StatelessWidget {
                 ),
               ),
 
-              // Action arrow
-              const SizedBox(width: AppTheme.spacingSmall),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: AppTheme.iconSm,
-                color: AppTheme.mutedTextColor,
-              ),
             ],
           ),
         );

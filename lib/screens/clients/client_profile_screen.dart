@@ -38,6 +38,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<VisitsProvider>().refreshVisitsForClient(widget.clientId);
       context.read<ServiceProvider>().loadServices();
+      context.read<StaffProvider>().loadStaff(); // Load staff data for visit cards
       _preloadImages();
     });
   }
@@ -715,6 +716,11 @@ class _VisitCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
+      elevation: AppTheme.elevationMedium,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+        side: BorderSide(color: AppTheme.borderLightColor, width: 1),
+      ),
       child: InkWell(
         onTap: () {
           context.pushNamed(
@@ -722,7 +728,7 @@ class _VisitCard extends StatelessWidget {
             pathParameters: {'visitId': visit.id},
           );
         },
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
         child: Padding(
           padding: const EdgeInsets.all(AppTheme.spacingMedium),
           child: Column(
@@ -731,42 +737,77 @@ class _VisitCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    visit.formattedVisitDate,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: AppTheme.secondaryTextColor,
+                        ),
+                        const SizedBox(width: AppTheme.spacingVerySmall),
+                        Text(
+                          'Date: ',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            visit.formattedVisitDate,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Heart icon for loved visits
+                      // Heart icon for loved visits - larger and more mobile-friendly
                       GestureDetector(
                         onTap: () => onToggleLoved(visit),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
+                        child: Container(
+                          padding: const EdgeInsets.all(8.0),
                           child: Icon(
                             (visit.loved ?? false) ? Icons.favorite : Icons.favorite_border,
                             color: (visit.loved ?? false) ? Colors.red : AppTheme.secondaryTextColor,
-                            size: 20,
+                            size: 28,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppTheme.secondaryTextColor,
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: AppTheme.spacingVerySmall),
-              Text(
-                visit.shortDescription,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.secondaryTextColor,
-                ),
+              const SizedBox(height: AppTheme.spacingSmall),
+              Row(
+                children: [
+                  Icon(
+                    Icons.design_services,
+                    size: 16,
+                    color: AppTheme.secondaryTextColor,
+                  ),
+                  const SizedBox(width: AppTheme.spacingVerySmall),
+                  Text(
+                    'Service: ',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.secondaryTextColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      visit.shortDescription,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.primaryTextColor,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               // Star rating (always on the left) and staff information
               if (visit.staffId != null || visit.rating != null) ...[
@@ -775,6 +816,19 @@ class _VisitCard extends StatelessWidget {
                   children: [
                     // Rating always comes first (left side)
                     if (visit.rating != null) ...[
+                      Icon(
+                        Icons.star,
+                        size: 16,
+                        color: AppTheme.secondaryTextColor,
+                      ),
+                      const SizedBox(width: AppTheme.spacingVerySmall),
+                      Text(
+                        'Rating: ',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.secondaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                       StarRating(
                         rating: visit.rating!,
                         size: 16.0,
@@ -803,14 +857,28 @@ class _VisitCard extends StatelessWidget {
     return SizedBox(
       height: 180, // Increased for larger thumbnails
       child: Row(
-        children: photos.take(2).map((photo) { // Showing only 2 images for bigger display
-          return Container(
-            width: 180, // Much larger for better visibility
-            height: 180,
-            margin: const EdgeInsets.only(right: AppTheme.spacingMedium),
-            child: _buildThumbnail(context, photo),
-          );
-        }).toList(),
+        children: [
+          for (int i = 0; i < 2 && i < photos.length; i++) ...[
+            () {
+              final photo = photos[i];
+              final remainingCount = photos.length - 2;
+              final showOverlay = i == 1 && remainingCount > 0; // Show "+N" on second image if more exist
+
+              return Container(
+                width: 180, // Much larger for better visibility
+                height: 180,
+                margin: const EdgeInsets.only(right: AppTheme.spacingMedium),
+                child: Stack(
+                  children: [
+                    _buildThumbnail(context, photo),
+                    if (showOverlay)
+                      _buildRemainingCountOverlay(context, remainingCount),
+                  ],
+                ),
+              );
+            }(),
+          ],
+        ],
       ),
     );
   }
@@ -886,6 +954,38 @@ class _VisitCard extends StatelessWidget {
     );
   }
 
+  Widget _buildRemainingCountOverlay(BuildContext context, int remainingCount) {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+          color: Colors.black.withValues(alpha: 0.6), // Semi-transparent overlay
+        ),
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1),
+            ),
+            child: Text(
+              '+$remainingCount',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStaffInfo(BuildContext context) {
     return Consumer<StaffProvider>(
       builder: (context, staffProvider, child) {
@@ -897,6 +997,19 @@ class _VisitCard extends StatelessWidget {
 
         return Row(
           children: [
+            Icon(
+              Icons.person,
+              size: 16,
+              color: AppTheme.secondaryTextColor,
+            ),
+            const SizedBox(width: AppTheme.spacingVerySmall),
+            Text(
+              'Staff: ',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.secondaryTextColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             CircleAvatar(
               radius: 12,
               backgroundColor: AppTheme.primaryAccentColor.withValues(alpha: 0.2),
@@ -912,10 +1025,9 @@ class _VisitCard extends StatelessWidget {
             const SizedBox(width: AppTheme.spacingSmall),
             Expanded(
               child: Text(
-                'by ${staff.name}',
+                staff.name,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppTheme.secondaryTextColor,
-                  fontStyle: FontStyle.italic,
+                  color: AppTheme.primaryTextColor,
                 ),
               ),
             ),

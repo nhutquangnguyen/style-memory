@@ -131,15 +131,42 @@ class AppRouter {
 }
 
 // Shell widget for bottom navigation
-class MainNavigationShell extends StatelessWidget {
+class MainNavigationShell extends StatefulWidget {
   final Widget child;
 
   const MainNavigationShell({super.key, required this.child});
 
   @override
+  State<MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends State<MainNavigationShell> {
+  @override
+  void initState() {
+    super.initState();
+    // Preload Loved Styles data when main navigation initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _preloadLovedStylesData();
+    });
+  }
+
+  Future<void> _preloadLovedStylesData() async {
+    // Small delay to ensure main navigation is fully settled
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Check if widget is still mounted before using context
+    if (!mounted) return;
+
+    // Run preloading in background without blocking UI
+    LovedStylesScreen.preloadLovedStylesData(context).catchError((e) {
+      debugPrint('Background preload failed: $e');
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: const MainBottomNavigation(),
     );
   }

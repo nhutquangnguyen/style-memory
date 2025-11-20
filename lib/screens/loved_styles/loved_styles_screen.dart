@@ -21,12 +21,99 @@ class LovedStylesScreen extends StatefulWidget {
     _LovedStylesScreenState._cachedLovedPhotos = null;
     _LovedStylesScreenState._lastCacheTime = null;
   }
+
+  // Static method to preload loved styles data
+  static Future<void> preloadLovedStylesData(BuildContext context) async {
+    // Check if we already have valid cached data
+    if (_LovedStylesScreenState._cachedLovedPhotos != null &&
+        _LovedStylesScreenState._lastCacheTime != null &&
+        DateTime.now().difference(_LovedStylesScreenState._lastCacheTime!) < _LovedStylesScreenState._cacheExpiry) {
+      debugPrint('Loved styles data already cached, skipping preload');
+      return;
+    }
+
+    try {
+      final clientsProvider = context.read<ClientsProvider>();
+      final visitsProvider = context.read<VisitsProvider>();
+
+      // Load all clients first
+      await clientsProvider.loadClients();
+      final clients = clientsProvider.clients;
+
+      List<PhotoWithContext> lovedPhotos = [];
+
+      // Load visits and photos for each client, but only include loved visits
+      for (final client in clients) {
+        await visitsProvider.loadVisitsForClient(client.id);
+        final visits = visitsProvider.getVisitsForClient(client.id);
+
+        // Filter for only loved visits
+        final lovedVisits = visits.where((visit) => visit.loved == true);
+
+        for (final visit in lovedVisits) {
+          if (visit.photos != null && visit.photos!.isNotEmpty) {
+            // Only load the first photo for thumbnail - much more efficient
+            final firstPhoto = visit.photos!.first;
+            final photoUrl = await visitsProvider.getPhotoUrl(firstPhoto.storagePath);
+
+            lovedPhotos.add(PhotoWithContext(
+              photo: firstPhoto,
+              client: client,
+              visit: visit,
+              photoUrl: photoUrl,
+            ));
+          }
+        }
+      }
+
+      // Sort by most recent first (visit date)
+      lovedPhotos.sort((a, b) => b.visit.visitDate.compareTo(a.visit.visitDate));
+
+      // Cache the results
+      _LovedStylesScreenState._cachedLovedPhotos = lovedPhotos;
+      _LovedStylesScreenState._lastCacheTime = DateTime.now();
+
+      // Smart preloading: prioritize viewport-visible images first
+      final allImageUrls = lovedPhotos
+          .map((photo) => photo.photoUrl)
+          .where((url) => url != null)
+          .cast<String>()
+          .toList();
+
+      if (allImageUrls.isNotEmpty) {
+        // Calculate how many cards fit in viewport - be conservative
+        const int viewportCardCount = 5; // Actual visible cards (reduced from 6)
+        const int preloadBuffer = 1; // Minimal buffer for smooth scrolling
+        final int priorityCount = viewportCardCount + preloadBuffer; // = 6 total
+
+        // Split into priority and background loading
+        final priorityUrls = allImageUrls.take(priorityCount).toList();
+        final backgroundUrls = allImageUrls.skip(priorityCount).toList();
+
+        // Load priority images immediately (viewport + buffer)
+        if (priorityUrls.isNotEmpty) {
+          ImageCacheManager.instance.preloadImagesParallel(priorityUrls);
+        }
+
+        // Load remaining images with delay to not impact initial performance
+        if (backgroundUrls.isNotEmpty) {
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            ImageCacheManager.instance.preloadImages(backgroundUrls);
+          });
+        }
+
+        debugPrint('Loved styles data preloaded: ${lovedPhotos.length} photos, ${priorityUrls.length} priority images, ${backgroundUrls.length} background images');
+      }
+    } catch (e) {
+      debugPrint('Failed to preload loved styles data: $e');
+    }
+  }
 }
 
 class _LovedStylesScreenState extends State<LovedStylesScreen> {
   List<PhotoWithContext> _lovedPhotos = [];
   List<PhotoWithContext> _filteredPhotos = [];
-  bool _isLoading = true;
+  bool _isLoading = false; // Start with false, will be set to true only if no cache
   String? _errorMessage;
 
   // Search and filter state
@@ -43,11 +130,25 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+
+    // Check if we have cached data immediately
+    if (_cachedLovedPhotos != null &&
+        _lastCacheTime != null &&
+        DateTime.now().difference(_lastCacheTime!) < _cacheExpiry) {
+      _lovedPhotos = _cachedLovedPhotos!;
+      _isLoading = false;
+      // Apply filters in next frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _applyFilters();
+      });
+    }
+
     // Defer loading until after the build phase completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadLovedStyles();
-      // Also load services for filtering
+      // Also load services and staff for proper display
       context.read<ServiceProvider>().loadServices();
+      context.read<StaffProvider>().loadStaff();
     });
   }
 
@@ -70,11 +171,13 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
       setState(() {
         _lovedPhotos = _cachedLovedPhotos!;
         _isLoading = false;
+        _errorMessage = null;
       });
       _applyFilters();
       return;
     }
 
+    // Only show loading if we don't have cached data
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -100,16 +203,16 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
 
         for (final visit in lovedVisits) {
           if (visit.photos != null && visit.photos!.isNotEmpty) {
-            for (final photo in visit.photos!) {
-              // Pre-fetch the photo URL to avoid calling provider during build
-              final photoUrl = await visitsProvider.getPhotoUrl(photo.storagePath);
-              lovedPhotos.add(PhotoWithContext(
-                photo: photo,
-                client: client,
-                visit: visit,
-                photoUrl: photoUrl,
-              ));
-            }
+            // Only load the first photo for thumbnail - much more efficient
+            final firstPhoto = visit.photos!.first;
+            final photoUrl = await visitsProvider.getPhotoUrl(firstPhoto.storagePath);
+
+            lovedPhotos.add(PhotoWithContext(
+              photo: firstPhoto,
+              client: client,
+              visit: visit,
+              photoUrl: photoUrl,
+            ));
           }
         }
       }
@@ -404,9 +507,31 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
       itemCount: _getUniqueVisits().length,
       itemBuilder: (context, index) {
         final visit = _getUniqueVisits()[index];
+
+        // Progressive preloading: preload images for upcoming cards
+        _progressivePreloadImages(index);
+
         return _buildVisitCard(visit);
       },
     );
+  }
+
+  void _progressivePreloadImages(int currentIndex) {
+    const int preloadAhead = 3; // Preload 3 cards ahead
+    final visits = _getUniqueVisits();
+    final startIndex = currentIndex + 1;
+    final endIndex = (startIndex + preloadAhead).clamp(0, visits.length);
+
+    for (int i = startIndex; i < endIndex; i++) {
+      final visit = visits[i];
+      final photoWithContext = _lovedPhotos
+          .where((photo) => photo.visit.id == visit.id)
+          .firstOrNull;
+
+      if (photoWithContext?.photoUrl != null) {
+        ImageCacheManager.instance.preloadImage(photoWithContext!.photoUrl!);
+      }
+    }
   }
 
   List<Visit> _getUniqueVisits() {
@@ -439,9 +564,10 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
-      elevation: 2,
+      elevation: AppTheme.elevationMedium,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+        side: BorderSide(color: AppTheme.borderLightColor, width: 1),
       ),
       child: InkWell(
         onTap: () {
@@ -495,6 +621,19 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                   children: [
                     Row(
                       children: [
+                        Icon(
+                          Icons.person,
+                          size: 16,
+                          color: AppTheme.secondaryTextColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Client: ',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         Expanded(
                           child: Text(
                             client.fullName,
@@ -503,47 +642,122 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today,
+                          size: 16,
+                          color: AppTheme.secondaryTextColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Date: ',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         Text(
                           visit.formattedVisitDate,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.secondaryTextColor,
+                            color: AppTheme.primaryTextColor,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      'Styling session',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.secondaryTextColor,
-                      ),
+                    Consumer<ServiceProvider>(
+                      builder: (context, serviceProvider, child) {
+                        final service = visit.serviceId != null && visit.serviceId!.isNotEmpty
+                            ? serviceProvider.getServiceById(visit.serviceId!)
+                            : null;
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.design_services,
+                              size: 16,
+                              color: AppTheme.secondaryTextColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Service: ',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.secondaryTextColor,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                service?.name ?? 'Styling session',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.primaryTextColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     if (visit.notes != null && visit.notes!.isNotEmpty) ...[
                       const SizedBox(height: 4),
-                      Text(
-                        visit.notes!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.notes,
+                            size: 16,
+                            color: AppTheme.secondaryTextColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Notes: ',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.secondaryTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              visit.notes!,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppTheme.primaryTextColor,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                     const SizedBox(height: 4),
-                    Text(
-                      '${visitPhotos.length} photo${visitPhotos.length != 1 ? 's' : ''}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppTheme.secondaryTextColor,
-                      ),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.photo_library,
+                          size: 16,
+                          color: AppTheme.secondaryTextColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Photos: ',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.secondaryTextColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Text(
+                          '${visit.photos?.length ?? 0} photo${(visit.photos?.length ?? 0) != 1 ? 's' : ''}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.primaryTextColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-
-              // Arrow indicator
-              const Icon(
-                Icons.chevron_right,
-                color: AppTheme.secondaryTextColor,
               ),
             ],
           ),
