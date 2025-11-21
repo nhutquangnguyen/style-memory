@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
+import '../services/photo_service_test.dart';
 import 'staff/staff_list_screen.dart';
 import 'services/service_list_screen.dart';
 
@@ -231,6 +233,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               const SizedBox(height: AppTheme.spacingLarge),
+
+              // Debug section (only show in debug mode)
+              if (kDebugMode) ...[
+                _buildSectionHeader(context, 'Debug'),
+                _buildActionTile(
+                  context,
+                  icon: Icons.cloud_upload,
+                  title: 'Test Wasabi Upload',
+                  onTap: () => _testWasabiUpload(context),
+                ),
+                _buildActionTile(
+                  context,
+                  icon: Icons.analytics,
+                  title: 'Wasabi Stats',
+                  onTap: () => _showWasabiStats(context),
+                ),
+                const SizedBox(height: AppTheme.spacingMedium),
+              ],
 
               // Logout button
               Padding(
@@ -599,6 +619,213 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  // Debug methods for Wasabi testing
+  Future<void> _testWasabiUpload(BuildContext context) async {
+    try {
+      // Use scaffold messenger instead of dialogs to avoid navigation issues
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Testing Wasabi upload...'),
+              ],
+            ),
+            duration: Duration(seconds: 10),
+          ),
+        );
+      }
+
+      final result = await PhotoServiceTest.testWasabiUploadWithImage();
+
+      if (context.mounted) {
+        // Clear any existing snackbars
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        // Show result dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(result['success'] ? '✅ Success!' : '❌ Error'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(result['message'] ?? 'Test completed'),
+                  if (result['success']) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('📊 Upload Stats:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('⏱️ Time: ${result['upload_duration_ms']}ms'),
+                          Text('📦 Size: ${(result['file_size_bytes'] / 1024).toStringAsFixed(1)} KB'),
+                        ],
+                      ),
+                    ),
+                    if (result['image_url'] != null) ...[
+                      const SizedBox(height: 8),
+                      const Text('📎 URL:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      SelectableText(
+                        result['image_url'],
+                        style: TextStyle(fontSize: 12, color: Colors.blue),
+                      ),
+                    ],
+                  ],
+                  if (!result['success'] && result['error'] != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SelectableText('Error: ${result['error']}'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showWasabiStats(BuildContext context) async {
+    try {
+      // Show loading snackbar instead of dialog
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text('Getting Wasabi stats...'),
+              ],
+            ),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+
+      final result = await PhotoServiceTest.testWasabiUpload();
+
+      if (context.mounted) {
+        // Clear any existing snackbars
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        // Show result dialog
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(result['success'] ? '🟢 Wasabi Connected' : '🔴 Connection Failed'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Status: ${result['success'] ? 'Connected' : 'Failed'}'),
+                  if (result['bucket_stats'] != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('📊 Bucket Info:', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('🪣 Name: ${result['bucket_stats']['bucket_name']}'),
+                          Text('🌏 Region: ${result['bucket_stats']['region']}'),
+                          Text('🔗 Endpoint: ${result['bucket_stats']['endpoint']}'),
+                          Text('✅ Status: ${result['bucket_stats']['status']}'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (!result['success'] && result['error'] != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: SelectableText('Error: ${result['error']}'),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to get stats: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
 }

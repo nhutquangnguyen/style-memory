@@ -8,6 +8,7 @@ import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../services/photo_service.dart';
 import '../../services/supabase_service.dart';
+import '../../services/wasabi_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/modern_input.dart';
@@ -198,30 +199,12 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
         await visitsProvider.deletePhoto(photoId);
       }
 
-      // Upload new photos
-      for (final imageFile in _newImages) {
-        final bytes = await imageFile.readAsBytes();
-        final compressedBytes = await PhotoService.compressImageBytes(bytes);
+      // Upload new photos in parallel
+      if (_newImages.isNotEmpty) {
         final currentUserId = SupabaseService.currentUser?.id;
-        if (currentUserId == null) continue;
-
-        final storagePath = await SupabaseService.uploadPhoto(
-          visitId: widget.visitId,
-          photoType: PhotoType.front, // Default type for manually added photos
-          photoData: compressedBytes,
-          userId: currentUserId,
-        );
-
-        // Create photo record in database
-        await SupabaseService.createPhoto(Photo(
-          id: '', // Will be generated
-          visitId: widget.visitId,
-          userId: currentUserId,
-          storagePath: storagePath,
-          photoType: PhotoType.front,
-          fileSize: compressedBytes.length,
-          createdAt: DateTime.now(),
-        ));
+        if (currentUserId != null) {
+          await _uploadPhotosInParallel(_newImages, widget.visitId, currentUserId);
+        }
       }
 
       // Refresh the visit data
@@ -769,5 +752,54 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
         ),
       ],
     );
+  }
+
+  /// Upload photos in parallel and wait for completion
+  Future<void> _uploadPhotosInParallel(
+    List<XFile> imageFiles,
+    String visitId,
+    String userId,
+  ) async {
+    // Create list of upload futures for parallel execution
+    final uploadFutures = imageFiles.asMap().entries.map((entry) async {
+      try {
+        final index = entry.key;
+        final imageFile = entry.value;
+        final bytes = await imageFile.readAsBytes();
+
+        // Compress photo
+        final compressedBytes = await PhotoService.compressImageBytes(bytes);
+
+        // Upload to Wasabi storage
+        final extension = 'jpg';
+        final customPath = 'photos/$userId/$visitId/front_${DateTime.now().millisecondsSinceEpoch}_$index.$extension';
+        await WasabiService.uploadPhotoFromBytes(
+          compressedBytes,
+          extension,
+          customPath: customPath,
+        );
+
+        // Create photo record in database with Wasabi object path
+        final photo = Photo(
+          id: '', // Will be generated
+          visitId: visitId,
+          userId: userId,
+          storagePath: 'wasabi:$customPath',
+          photoType: PhotoType.front,
+          fileSize: compressedBytes.length,
+          createdAt: DateTime.now(),
+        );
+
+        await SupabaseService.createPhoto(photo);
+
+        return photo;
+      } catch (e) {
+        // Log error silently without printing to console
+        return null;
+      }
+    }).toList();
+
+    // Execute all uploads in parallel
+    await Future.wait(uploadFutures);
   }
 }

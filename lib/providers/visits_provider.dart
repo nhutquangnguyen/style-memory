@@ -5,12 +5,14 @@ import 'package:uuid/uuid.dart';
 import '../models/models.dart';
 import '../services/supabase_service.dart';
 import '../services/photo_service.dart';
+import '../services/wasabi_service.dart';
 
 class VisitsProvider extends ChangeNotifier {
   Map<String, List<Visit>> _visitsByClient = {};
   bool _isLoading = false;
   String? _errorMessage;
   bool _isUploading = false;
+
 
   // Cache to prevent unnecessary reloads
   Map<String, DateTime> _lastLoadTimes = {};
@@ -19,6 +21,7 @@ class VisitsProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isUploading => _isUploading;
   String? get errorMessage => _errorMessage;
+
 
   List<Visit> getVisitsForClient(String clientId) {
     return _visitsByClient[clientId] ?? [];
@@ -100,37 +103,12 @@ class VisitsProvider extends ChangeNotifier {
 
       final createdVisit = await SupabaseService.createVisit(visit);
 
-      // Upload photos and create photo records
-      for (final entry in photos.entries) {
-        final photoType = entry.key;
-        final photoData = entry.value;
-
-        // Compress photo
-        final compressedPhoto = await PhotoService.compressImageBytes(photoData);
-
-        // Upload to storage
-        final storagePath = await SupabaseService.uploadPhoto(
-          photoData: compressedPhoto,
-          userId: userId,
-          visitId: visitId,
-          photoType: photoType,
-        );
-
-        // Create photo record
-        final photo = Photo(
-          id: const Uuid().v4(),
-          visitId: visitId,
-          userId: userId,
-          storagePath: storagePath,
-          photoType: photoType,
-          fileSize: compressedPhoto.length,
-          createdAt: DateTime.now(),
-        );
-
-        await SupabaseService.createPhoto(photo);
+      // Upload photos in parallel and wait for completion
+      if (photos.isNotEmpty) {
+        await _uploadPhotosInParallel(photos, visitId, userId);
       }
 
-      // Add to local list (ensure clientId exists in cache)
+      // Add to local list after photos are uploaded
       if (!_visitsByClient.containsKey(clientId)) {
         _visitsByClient[clientId] = [];
       }
@@ -148,6 +126,56 @@ class VisitsProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Upload photos in parallel and wait for completion (blocking)
+  Future<void> _uploadPhotosInParallel(
+    Map<PhotoType, Uint8List> photos,
+    String visitId,
+    String userId,
+  ) async {
+    // Create list of upload futures for parallel execution
+    final uploadFutures = photos.entries.map((entry) async {
+      try {
+        final photoType = entry.key;
+        final photoData = entry.value;
+
+        // Compress photo
+        final compressedPhoto = await PhotoService.compressImageBytes(photoData);
+
+        // Upload to Wasabi storage
+        final extension = 'jpg';
+        final customPath = 'photos/$userId/$visitId/${photoType.name}_${DateTime.now().millisecondsSinceEpoch}.$extension';
+        await WasabiService.uploadPhotoFromBytes(
+          compressedPhoto,
+          extension,
+          customPath: customPath,
+        );
+
+        // Create photo record with Wasabi object path
+        final photo = Photo(
+          id: const Uuid().v4(),
+          visitId: visitId,
+          userId: userId,
+          storagePath: 'wasabi:$customPath',
+          photoType: photoType,
+          fileSize: compressedPhoto.length,
+          createdAt: DateTime.now(),
+        );
+
+        await SupabaseService.createPhoto(photo);
+
+        return photo;
+      } catch (e) {
+        debugPrint('Failed to upload photo ${entry.key.name}: $e');
+        return null;
+      }
+    }).toList();
+
+    // Execute all uploads in parallel and wait for completion
+    final results = await Future.wait(uploadFutures);
+    final successfulPhotos = results.whereType<Photo>().toList();
+  }
+
 
   Future<bool> updateVisit(Visit visit) async {
     _isLoading = true;
@@ -236,7 +264,28 @@ class VisitsProvider extends ChangeNotifier {
 
   Future<String?> getPhotoUrl(String storagePath) async {
     try {
-      return await SupabaseService.getPhotoUrl(storagePath);
+      // For new Wasabi integration, storagePath starts with 'wasabi:'
+      if (storagePath.startsWith('wasabi:')) {
+        final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
+        final presignedUrl = await WasabiService.getPresignedUrl(objectName, expiry: const Duration(hours: 1));
+        return presignedUrl;
+      }
+
+      // For legacy Wasabi URLs (full URLs from previous uploads)
+      if (storagePath.startsWith('https://s3.') && storagePath.contains('wasabisys.com')) {
+        // Extract object name from full URL and generate presigned URL
+        final uri = Uri.parse(storagePath);
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.length >= 2) {
+          final objectName = pathSegments.skip(1).join('/'); // Skip bucket name
+          final presignedUrl = await WasabiService.getPresignedUrl(objectName, expiry: const Duration(hours: 1));
+          return presignedUrl;
+        }
+      }
+
+      // Fallback for old Supabase storage paths
+      final supabaseUrl = await SupabaseService.getPhotoUrl(storagePath);
+      return supabaseUrl;
     } catch (e) {
       _errorMessage = 'Failed to get photo URL: $e';
       notifyListeners();
@@ -301,7 +350,25 @@ class VisitsProvider extends ChangeNotifier {
         throw Exception('Photo not found in cache');
       }
 
-      await SupabaseService.deletePhoto(photoId, storagePath);
+      // Delete from Wasabi storage if it's a Wasabi object
+      if (storagePath.startsWith('wasabi:')) {
+        final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
+        final wasabiSuccess = await WasabiService.deletePhoto('https://s3.ap-southeast-1.wasabisys.com/style-memory-photos/$objectName');
+
+        if (!wasabiSuccess) {
+          throw Exception('Failed to delete photo from Wasabi storage');
+        }
+      } else if (storagePath.startsWith('https://s3.') && storagePath.contains('wasabisys.com')) {
+        // Legacy Wasabi URL format
+        final wasabiSuccess = await WasabiService.deletePhoto(storagePath);
+
+        if (!wasabiSuccess) {
+          throw Exception('Failed to delete photo from Wasabi storage');
+        }
+      }
+
+      // Delete photo record from database
+      await SupabaseService.deletePhotoRecord(photoId);
 
       // Remove from local cache if exists
       for (final visits in _visitsByClient.values) {

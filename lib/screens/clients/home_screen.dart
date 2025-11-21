@@ -10,7 +10,6 @@ import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/modern_card.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
-import '../../widgets/common/modern_badge.dart';
 import '../../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -260,7 +259,6 @@ class _ModernClientCard extends StatelessWidget {
     return Consumer<VisitsProvider>(
       builder: (context, visitsProvider, child) {
         final lastVisit = visitsProvider.getLastVisitForClient(client.id);
-        final visitCount = visitsProvider.getVisitsForClient(client.id).length;
 
         return ModernCard(
           margin: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
@@ -296,28 +294,11 @@ class _ModernClientCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            client.fullName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        if (visitCount > 0)
-                          Consumer<LanguageProvider>(
-                            builder: (context, languageProvider, child) {
-                              final l10n = AppLocalizations.of(context)!;
-                              return ModernBadge(
-                                text: '$visitCount ${visitCount == 1 ? l10n.visit : l10n.visits}',
-                                variant: ModernBadgeVariant.primary,
-                                size: ModernBadgeSize.small,
-                              );
-                            },
-                          ),
-                      ],
+                    Text(
+                      client.fullName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: AppTheme.spacingXs),
 

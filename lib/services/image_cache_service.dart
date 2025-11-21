@@ -66,7 +66,6 @@ class ImageCacheService {
       // Download image if not cached
       return await _downloadAndCacheImage(imageUrl, cacheKey);
     } catch (e) {
-      debugPrint('Error getting cached image: $e');
       return null;
     }
   }
@@ -91,7 +90,7 @@ class ImageCacheService {
         return imageData;
       }
     } catch (e) {
-      debugPrint('Error downloading image: $e');
+      // Error handled silently
     }
     return null;
   }

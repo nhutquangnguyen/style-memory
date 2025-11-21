@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import 'providers/providers.dart';
 import 'services/supabase_service.dart';
+import 'services/wasabi_service.dart';
 import 'services/image_cache_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/app_router.dart';
@@ -22,6 +23,15 @@ void main() async {
     supabaseUrl: dotenv.env['SUPABASE_URL'] ?? '',
     supabaseAnonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
+
+  // Initialize Wasabi service
+  try {
+    await WasabiService.initialize();
+    debugPrint('Wasabi service initialized successfully');
+  } catch (e) {
+    debugPrint('Failed to initialize Wasabi service: $e');
+    // Continue without Wasabi for now
+  }
 
   // Initialize image cache service
   await ImageCacheService.initialize();

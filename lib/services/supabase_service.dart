@@ -420,6 +420,11 @@ class SupabaseService {
     await _client.from('photos').delete().eq('id', photoId);
   }
 
+  /// Delete only the photo record from database (for Wasabi integration)
+  static Future<void> deletePhotoRecord(String photoId) async {
+    await _client.from('photos').delete().eq('id', photoId);
+  }
+
   // Store methods
   static Future<List<Store>> getUserStores() async {
     final userId = currentUser?.id;

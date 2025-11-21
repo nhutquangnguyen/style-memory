@@ -8,6 +8,7 @@ import '../models/models.dart';
 import '../providers/providers.dart';
 import '../services/supabase_service.dart';
 import '../services/photo_service.dart';
+import '../services/wasabi_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common/modern_card.dart';
 import '../widgets/common/modern_button.dart';
@@ -432,36 +433,9 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
       // Save visit and get the ID
       final savedVisit = await SupabaseService.createVisit(visit);
 
-      // Upload photos if any
+      // Upload photos in parallel if any
       if (_selectedImages.isNotEmpty) {
-        for (int i = 0; i < _selectedImages.length; i++) {
-          final imageFile = _selectedImages[i];
-          final originalBytes = await File(imageFile.path).readAsBytes();
-
-          // Compress image for better storage and performance
-          final compressedBytes = await PhotoService.compressImageBytes(originalBytes);
-
-          // Upload compressed image to storage
-          final storagePath = await SupabaseService.uploadPhoto(
-            photoData: compressedBytes,
-            userId: SupabaseService.currentUser!.id,
-            visitId: savedVisit.id,
-            photoType: PhotoType.front, // For simplicity, all photos are 'front'
-          );
-
-          // Create photo record
-          final photo = Photo(
-            id: '', // Will be generated
-            visitId: savedVisit.id,
-            userId: SupabaseService.currentUser!.id,
-            storagePath: storagePath,
-            photoType: PhotoType.front,
-            fileSize: compressedBytes.length, // Use compressed size
-            createdAt: DateTime.now(),
-          );
-
-          await SupabaseService.createPhoto(photo);
-        }
+        await _uploadPhotosInParallel(_selectedImages, savedVisit.id, SupabaseService.currentUser!.id);
       }
 
       // Refresh the visits list to show the new visit immediately
@@ -504,6 +478,56 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         });
       }
     }
+  }
+
+  /// Upload photos in parallel and wait for completion
+  Future<void> _uploadPhotosInParallel(
+    List<XFile> imageFiles,
+    String visitId,
+    String userId,
+  ) async {
+    // Create list of upload futures for parallel execution
+    final uploadFutures = imageFiles.asMap().entries.map((entry) async {
+      try {
+        final index = entry.key;
+        final imageFile = entry.value;
+        final originalBytes = await File(imageFile.path).readAsBytes();
+
+        // Compress image for better storage and performance
+        final compressedBytes = await PhotoService.compressImageBytes(originalBytes);
+
+        // Upload compressed image to Wasabi storage
+        final extension = 'jpg';
+        final customPath = 'photos/$userId/$visitId/front_${DateTime.now().millisecondsSinceEpoch}_$index.$extension';
+        await WasabiService.uploadPhotoFromBytes(
+          compressedBytes,
+          extension,
+          customPath: customPath,
+        );
+
+        // Create photo record with Wasabi object path
+        final photo = Photo(
+          id: '', // Will be generated
+          visitId: visitId,
+          userId: userId,
+          storagePath: 'wasabi:$customPath',
+          photoType: PhotoType.front,
+          fileSize: compressedBytes.length,
+          createdAt: DateTime.now(),
+        );
+
+        await SupabaseService.createPhoto(photo);
+
+        return photo;
+      } catch (e) {
+        debugPrint('Failed to upload photo ${entry.value.name}: $e');
+        return null;
+      }
+    }).toList();
+
+    // Execute all uploads in parallel
+    final results = await Future.wait(uploadFutures);
+    final successfulPhotos = results.whereType<Photo>().toList();
   }
 
   @override
