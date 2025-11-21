@@ -719,139 +719,169 @@ class _VisitCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingMedium),
-      elevation: AppTheme.elevationMedium,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-        side: BorderSide(color: AppTheme.borderLightColor, width: 1),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: AppTheme.borderLightColor.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
       ),
-      child: InkWell(
-        onTap: () {
-          context.pushNamed(
-            'visit_details',
-            pathParameters: {'visitId': visit.id},
-          );
-        },
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.spacingMedium),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                        const SizedBox(width: AppTheme.spacingVerySmall),
-                        Text(
-                          l10n.dateColon,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.secondaryTextColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Expanded(
-                          child: Text(
-                            visit.formattedVisitDate(l10n),
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Heart icon for loved visits - larger and more mobile-friendly
-                      GestureDetector(
-                        onTap: () => onToggleLoved(visit),
-                        child: Container(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Icon(
-                            (visit.loved ?? false) ? Icons.favorite : Icons.favorite_border,
-                            color: (visit.loved ?? false) ? Colors.red : AppTheme.secondaryTextColor,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppTheme.spacingSmall),
-              Row(
-                children: [
-                  Icon(
-                    Icons.design_services,
-                    size: 16,
-                    color: AppTheme.secondaryTextColor,
-                  ),
-                  const SizedBox(width: AppTheme.spacingVerySmall),
-                  Text(
-                    l10n.serviceColon,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.secondaryTextColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      visit.shortDescription,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.primaryTextColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              // Star rating (always on the left) and staff information
-              if (visit.staffId != null || visit.rating != null) ...[
-                const SizedBox(height: AppTheme.spacingSmall),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            context.pushNamed(
+              'visit_details',
+              pathParameters: {'visitId': visit.id},
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with service and heart
                 Row(
                   children: [
-                    // Rating always comes first (left side)
-                    if (visit.rating != null) ...[
-                      Icon(
-                        Icons.star,
-                        size: 16,
-                        color: AppTheme.secondaryTextColor,
-                      ),
-                      const SizedBox(width: AppTheme.spacingVerySmall),
-                      Text(
-                        'Rating: ',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppTheme.secondaryTextColor,
-                          fontWeight: FontWeight.w500,
+                    // Service badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                          width: 0.5,
                         ),
                       ),
-                      StarRating(
-                        rating: visit.rating!,
-                        size: 16.0,
-                        readOnly: true,
+                      child: Text(
+                        visit.shortDescription,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppTheme.primaryColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
                       ),
-                      const SizedBox(width: AppTheme.spacingSmall),
+                    ),
+                    const Spacer(),
+                    // Heart icon with subtle background
+                    GestureDetector(
+                      onTap: () => onToggleLoved(visit),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (visit.loved ?? false)
+                            ? Colors.red.withValues(alpha: 0.1)
+                            : AppTheme.surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          (visit.loved ?? false) ? Icons.favorite : Icons.favorite_border,
+                          color: (visit.loved ?? false) ? Colors.red : AppTheme.mutedTextColor,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Rating and staff info row
+                if (visit.staffId != null || visit.rating != null) ...[
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      if (visit.rating != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: Colors.amber[700],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                visit.rating.toString(),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.amber[800],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      if (visit.staffId != null)
+                        Expanded(child: _buildStaffInfo(context)),
                     ],
-                    // Staff information takes remaining space
-                    if (visit.staffId != null)
-                      Expanded(child: _buildStaffInfo(context)),
+                  ),
+                ],
+
+                // Photo preview
+                if (visit.photos != null && visit.photos!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _buildPhotoPreview(context, visit.photos!),
+                ],
+
+                // Time at bottom
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            size: 12,
+                            color: AppTheme.mutedTextColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            visit.simpleTimeFormat(l10n),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.mutedTextColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ],
-              if (visit.photos != null && visit.photos!.isNotEmpty) ...[
-                const SizedBox(height: AppTheme.spacingMedium),
-                _buildPhotoPreview(context, visit.photos!),
-              ],
-            ],
+            ),
           ),
         ),
       ),
@@ -860,28 +890,34 @@ class _VisitCard extends StatelessWidget {
 
   Widget _buildPhotoPreview(BuildContext context, List<Photo> photos) {
     return SizedBox(
-      height: 180, // Increased for larger thumbnails
+      height: 120,
       child: Row(
         children: [
           for (int i = 0; i < 2 && i < photos.length; i++) ...[
-            () {
-              final photo = photos[i];
-              final remainingCount = photos.length - 2;
-              final showOverlay = i == 1 && remainingCount > 0; // Show "+N" on second image if more exist
+            Expanded(
+              child: () {
+                final photo = photos[i];
+                final remainingCount = photos.length - 2;
+                final showOverlay = i == 1 && remainingCount > 0;
 
-              return Container(
-                width: 180, // Much larger for better visibility
-                height: 180,
-                margin: const EdgeInsets.only(right: AppTheme.spacingMedium),
-                child: Stack(
-                  children: [
-                    _buildThumbnail(context, photo),
-                    if (showOverlay)
-                      _buildRemainingCountOverlay(context, remainingCount),
-                  ],
-                ),
-              );
-            }(),
+                return Container(
+                  height: 120,
+                  margin: EdgeInsets.only(
+                    right: i < 1 && photos.length > 1 ? AppTheme.spacingSmall : 0,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Stack(
+                      children: [
+                        _buildThumbnail(context, photo),
+                        if (showOverlay)
+                          _buildRemainingCountOverlay(context, remainingCount),
+                      ],
+                    ),
+                  ),
+                );
+              }(),
+            ),
           ],
         ],
       ),

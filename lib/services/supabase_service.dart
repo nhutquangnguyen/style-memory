@@ -310,6 +310,20 @@ class SupabaseService {
         .eq('id', visitId);
   }
 
+  static Future<Visit> getVisitById(String visitId) async {
+    final response = await _client
+        .from('visits')
+        .select('''
+          *,
+          photos (*),
+          services (id, name)
+        ''')
+        .eq('id', visitId)
+        .single();
+
+    return Visit.fromJson(response);
+  }
+
   static Future<void> deleteVisit(String visitId) async {
     // Delete photos from storage first
     final photos = await _client

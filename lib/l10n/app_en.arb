@@ -322,5 +322,10 @@
   "deleteService": "Delete Service",
   "confirmDeleteService": "Are you sure you want to delete \"{serviceName}\"? This action cannot be undone.",
   "serviceDeletedSuccessfully": "Service deleted successfully",
-  "pleaseEnterServiceName": "Please enter a service name"
+  "pleaseEnterServiceName": "Please enter a service name",
+  "time": "Time",
+  "productsUsed": "Products Used",
+  "editVisit": "Edit Visit",
+  "deleteVisit": "Delete Visit",
+  "visitUpdatedSuccessfully": "Visit updated successfully"
 }

@@ -271,5 +271,10 @@
   "deleteService": "Xóa Dịch Vụ",
   "confirmDeleteService": "Bạn có chắc chắn muốn xóa \"{serviceName}\"? Hành động này không thể hoàn tác.",
   "serviceDeletedSuccessfully": "Dịch vụ đã được xóa thành công",
-  "pleaseEnterServiceName": "Vui lòng nhập tên dịch vụ"
+  "pleaseEnterServiceName": "Vui lòng nhập tên dịch vụ",
+  "time": "Thời gian",
+  "productsUsed": "Sản phẩm đã sử dụng",
+  "editVisit": "Chỉnh Sửa Lần Hẹn",
+  "deleteVisit": "Xóa Lần Hẹn",
+  "visitUpdatedSuccessfully": "Lần hẹn đã được cập nhật thành công"
 }

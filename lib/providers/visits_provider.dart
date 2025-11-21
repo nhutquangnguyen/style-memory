@@ -257,9 +257,75 @@ class VisitsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get a single visit by ID
+  Future<Visit?> getVisitById(String visitId) async {
+    try {
+      // First check if we have it in cache
+      for (final visits in _visitsByClient.values) {
+        for (final visit in visits) {
+          if (visit.id == visitId) {
+            return visit;
+          }
+        }
+      }
+
+      // If not in cache, fetch from database
+      final visit = await SupabaseService.getVisitById(visitId);
+      return visit;
+    } catch (e) {
+      _errorMessage = 'Failed to get visit: $e';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Delete a single photo from a visit
+  Future<bool> deletePhoto(String photoId) async {
+    try {
+      // Find the photo in cache to get storage path
+      String? storagePath;
+      for (final visits in _visitsByClient.values) {
+        for (final visit in visits) {
+          if (visit.photos != null) {
+            for (final photo in visit.photos!) {
+              if (photo.id == photoId) {
+                storagePath = photo.storagePath;
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (storagePath == null) {
+        throw Exception('Photo not found in cache');
+      }
+
+      await SupabaseService.deletePhoto(photoId, storagePath);
+
+      // Remove from local cache if exists
+      for (final visits in _visitsByClient.values) {
+        for (final visit in visits) {
+          if (visit.photos != null) {
+            visit.photos!.removeWhere((photo) => photo.id == photoId);
+          }
+        }
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to delete photo: $e';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Refresh visits for a specific client
   Future<void> refreshVisitsForClient(String clientId) async {
-    // Force refresh by clearing cache for this client
+    // Clear cache for this client to force reload
     _lastLoadTimes.remove(clientId);
+    _visitsByClient.remove(clientId);
     await loadVisitsForClient(clientId);
   }
 

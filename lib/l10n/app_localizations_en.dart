@@ -760,4 +760,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pleaseEnterServiceName => 'Please enter a service name';
+
+  @override
+  String get time => 'Time';
+
+  @override
+  String get productsUsed => 'Products Used';
+
+  @override
+  String get editVisit => 'Edit Visit';
+
+  @override
+  String get deleteVisit => 'Delete Visit';
+
+  @override
+  String get visitUpdatedSuccessfully => 'Visit updated successfully';
 }

@@ -738,4 +738,19 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get pleaseEnterServiceName => 'Vui lòng nhập tên dịch vụ';
+
+  @override
+  String get time => 'Thời gian';
+
+  @override
+  String get productsUsed => 'Sản phẩm đã sử dụng';
+
+  @override
+  String get editVisit => 'Chỉnh Sửa Lần Hẹn';
+
+  @override
+  String get deleteVisit => 'Xóa Lần Hẹn';
+
+  @override
+  String get visitUpdatedSuccessfully => 'Lần hẹn đã được cập nhật thành công';
 }

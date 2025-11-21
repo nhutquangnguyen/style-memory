@@ -95,7 +95,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
               ),
               title: _isSelectionMode
                 ? Text('${_selectedPhotoIds.length} photo${_selectedPhotoIds.length != 1 ? 's' : ''} selected')
-                : Text(client?.fullName ?? 'Visit Details'),
+                : Text(client?.fullName ?? l10n.visitDetails),
               actions: [
                 // Share button - always visible when photos exist
                 if (_visit!.photos != null && _visit!.photos!.isNotEmpty)
@@ -127,13 +127,13 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
-                      child: Text('Edit Visit'),
+                      child: Text(l10n.editVisit),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Text('Delete Visit'),
+                      child: Text(l10n.deleteVisit),
                     ),
                   ],
                 ),
@@ -193,26 +193,21 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Photos header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Photos (${photos.length})',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            if (photos.isNotEmpty && _isSelectionMode)
+        // Show selection count only when in selection mode
+        if (photos.isNotEmpty && _isSelectionMode) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
               Text(
                 '${_selectedPhotoIds.length} selected',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppTheme.secondaryTextColor,
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.spacingMedium),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+        ],
 
         // Photo grid
         GridView.builder(
@@ -382,7 +377,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Visit Details',
+              l10n.visitDetails,
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 fontSize: 20,
               ),
@@ -390,9 +385,9 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             const SizedBox(height: AppTheme.spacingLarge),
 
             _buildDetailRow(
-              icon: Icons.calendar_today,
-              label: 'Date',
-              value: _visit!.formattedVisitDate(l10n),
+              icon: Icons.schedule,
+              label: l10n.time,
+              value: _visit!.simpleTimeFormat(l10n),
             ),
 
             if (_visit!.serviceId != null && _visit!.serviceId!.isNotEmpty)
@@ -401,8 +396,8 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                   final service = serviceProvider.getServiceById(_visit!.serviceId!);
                   return _buildDetailRow(
                     icon: Icons.design_services,
-                    label: 'Service',
-                    value: service?.name ?? 'Service selected',
+                    label: l10n.service,
+                    value: service?.name ?? l10n.serviceSelected,
                   );
                 },
               ),
@@ -418,24 +413,17 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             if (_visit!.notes != null && _visit!.notes!.isNotEmpty)
               _buildDetailSection(
                 icon: Icons.notes,
-                label: 'Notes',
+                label: l10n.notes,
                 value: _visit!.notes!,
               ),
 
             if (_visit!.productsUsed != null && _visit!.productsUsed!.isNotEmpty)
               _buildDetailSection(
                 icon: Icons.inventory_2,
-                label: 'Products Used',
+                label: l10n.productsUsed,
                 value: _visit!.productsUsed!,
               ),
 
-            const SizedBox(height: AppTheme.spacingMedium),
-
-            _buildDetailRow(
-              icon: Icons.photo_library,
-              label: 'Photos',
-              value: '${_visit!.photos?.length ?? 0} photos',
-            ),
           ],
         ),
       ),
@@ -528,13 +516,14 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   Widget _buildStaffDetailRow() {
     return Consumer<StaffProvider>(
       builder: (context, staffProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final staff = staffProvider.getStaffById(_visit!.staffId!);
 
         if (staff == null) {
           return _buildDetailRow(
             icon: Icons.person_outline,
-            label: 'Staff Member',
-            value: 'Staff not found',
+            label: l10n.staffMember,
+            value: l10n.staffNotFound,
           );
         }
 
@@ -554,7 +543,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Staff Member',
+                      l10n.staffMember,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppTheme.secondaryTextColor,
                       ),
@@ -642,16 +631,16 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   }
 
   void _showEditDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit visit feature coming soon')),
-    );
+    context.goNamed('edit_visit', pathParameters: {'visitId': _visit!.id});
   }
 
   void _showDeleteDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Visit'),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.deleteVisit),
         content: const Text(
           'Are you sure you want to delete this visit? This will also delete all photos. This action cannot be undone.',
         ),
@@ -685,7 +674,8 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             child: const Text('Delete'),
           ),
         ],
-      ),
+        );
+      },
     );
   }
 

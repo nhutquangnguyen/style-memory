@@ -1489,6 +1489,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please enter a service name'**
   String get pleaseEnterServiceName;
+
+  /// No description provided for @time.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get time;
+
+  /// No description provided for @productsUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Products Used'**
+  String get productsUsed;
+
+  /// No description provided for @editVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Visit'**
+  String get editVisit;
+
+  /// No description provided for @deleteVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Visit'**
+  String get deleteVisit;
+
+  /// No description provided for @visitUpdatedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit updated successfully'**
+  String get visitUpdatedSuccessfully;
 }
 
 class _AppLocalizationsDelegate

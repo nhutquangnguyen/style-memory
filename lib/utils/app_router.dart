@@ -13,6 +13,7 @@ import '../screens/clients/edit_client_screen.dart';
 import '../screens/clients/client_profile_screen.dart';
 import '../screens/simple_photo_notes_screen.dart';
 import '../screens/visits/visit_details_screen.dart';
+import '../screens/visits/edit_visit_screen.dart';
 import '../screens/gallery/gallery_screen.dart';
 import '../screens/loved_styles/loved_styles_screen.dart';
 import '../screens/settings_screen.dart';
@@ -129,6 +130,15 @@ class AppRouter {
         builder: (context, state) {
           final clientId = state.pathParameters['clientId']!;
           return EditClientScreen(clientId: clientId);
+        },
+      ),
+      // Edit visit route
+      GoRoute(
+        path: '/visits/:visitId/edit',
+        name: 'edit_visit',
+        builder: (context, state) {
+          final visitId = state.pathParameters['visitId']!;
+          return EditVisitScreen(visitId: visitId);
         },
       ),
       // Full gallery accessible from settings
