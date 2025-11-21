@@ -45,22 +45,77 @@ class VisitsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final visits = await SupabaseService.getVisitsForClient(clientId);
+      final visits = await _retryOperation(() => SupabaseService.getVisitsForClient(clientId));
       _visitsByClient[clientId] = visits;
       _lastLoadTimes[clientId] = DateTime.now(); // Cache the load time
     } catch (e) {
-      _errorMessage = 'Failed to load visits: $e';
+      _errorMessage = _getNetworkErrorMessage(e);
     }
 
     _isLoading = false;
     notifyListeners();
   }
 
+  /// Retry network operations with exponential backoff
+  Future<T> _retryOperation<T>(Future<T> Function() operation, {int maxRetries = 3}) async {
+    int attempt = 0;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxRetries) {
+      try {
+        return await operation();
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          rethrow; // Final attempt failed
+        }
+
+        // Check if it's a retryable error
+        if (_isRetryableError(e)) {
+          await Future.delayed(delay);
+          delay *= 2; // Exponential backoff
+        } else {
+          rethrow; // Don't retry non-retryable errors
+        }
+      }
+    }
+    throw Exception('Max retries exceeded');
+  }
+
+  /// Check if an error should be retried
+  bool _isRetryableError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('connection reset by peer') ||
+           errorString.contains('network error') ||
+           errorString.contains('timeout') ||
+           errorString.contains('connection refused') ||
+           errorString.contains('host unreachable') ||
+           errorString.contains('temporary failure');
+  }
+
+  /// Get user-friendly error message
+  String _getNetworkErrorMessage(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('connection reset by peer') ||
+        errorString.contains('network error') ||
+        errorString.contains('connection refused')) {
+      return 'Network connection issue. Please check your internet connection and try again.';
+    } else if (errorString.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    } else if (errorString.contains('unauthorized') ||
+               errorString.contains('authentication')) {
+      return 'Authentication error. Please sign in again.';
+    } else {
+      return 'Failed to load data. Please try again.';
+    }
+  }
+
   Future<Visit?> getVisit(String visitId) async {
     try {
-      return await SupabaseService.getVisit(visitId);
+      return await _retryOperation(() => SupabaseService.getVisit(visitId));
     } catch (e) {
-      _errorMessage = 'Failed to load visit: $e';
+      _errorMessage = _getNetworkErrorMessage(e);
       notifyListeners();
       return null;
     }
@@ -101,7 +156,7 @@ class VisitsProvider extends ChangeNotifier {
         updatedAt: DateTime.now(),
       );
 
-      final createdVisit = await SupabaseService.createVisit(visit);
+      final createdVisit = await _retryOperation(() => SupabaseService.createVisit(visit));
 
       // Upload photos in parallel and wait for completion
       if (photos.isNotEmpty) {
@@ -172,8 +227,7 @@ class VisitsProvider extends ChangeNotifier {
     }).toList();
 
     // Execute all uploads in parallel and wait for completion
-    final results = await Future.wait(uploadFutures);
-    final successfulPhotos = results.whereType<Photo>().toList();
+    await Future.wait(uploadFutures);
   }
 
 

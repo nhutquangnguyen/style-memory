@@ -62,14 +62,69 @@ class ClientsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _clients = await SupabaseService.getClients();
+      _clients = await _retryOperation(() => SupabaseService.getClients());
       _lastLoadTime = DateTime.now(); // Cache the load time
     } catch (e) {
-      _errorMessage = 'Failed to load clients: $e';
+      _errorMessage = _getNetworkErrorMessage(e);
     }
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  /// Retry network operations with exponential backoff
+  Future<T> _retryOperation<T>(Future<T> Function() operation, {int maxRetries = 3}) async {
+    int attempt = 0;
+    Duration delay = const Duration(seconds: 1);
+
+    while (attempt < maxRetries) {
+      try {
+        return await operation();
+      } catch (e) {
+        attempt++;
+        if (attempt >= maxRetries) {
+          rethrow; // Final attempt failed
+        }
+
+        // Check if it's a retryable error
+        if (_isRetryableError(e)) {
+          await Future.delayed(delay);
+          delay *= 2; // Exponential backoff
+        } else {
+          rethrow; // Don't retry non-retryable errors
+        }
+      }
+    }
+    throw Exception('Max retries exceeded');
+  }
+
+  /// Check if an error should be retried
+  bool _isRetryableError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('connection reset by peer') ||
+           errorString.contains('network error') ||
+           errorString.contains('timeout') ||
+           errorString.contains('connection refused') ||
+           errorString.contains('host unreachable') ||
+           errorString.contains('temporary failure');
+  }
+
+  /// Get user-friendly error message
+  String _getNetworkErrorMessage(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('connection reset by peer') ||
+        errorString.contains('network error') ||
+        errorString.contains('connection refused')) {
+      return 'Network connection issue. Please check your internet connection and try again.';
+    } else if (errorString.contains('timeout')) {
+      return 'Request timed out. Please try again.';
+    } else if (errorString.contains('unauthorized') ||
+               errorString.contains('authentication')) {
+      return 'Authentication error. Please sign in again.';
+    } else {
+      return 'Failed to load clients. Please try again.';
+    }
   }
 
   Future<bool> createClient({
