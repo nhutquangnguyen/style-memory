@@ -5,4 +5,5 @@ export 'language_provider.dart';
 export 'service_provider.dart';
 export 'staff_provider.dart';
 export 'store_provider.dart';
+export 'stores_provider.dart';
 export 'visits_provider.dart';

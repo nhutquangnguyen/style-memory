@@ -9,6 +9,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
 import '../screens/clients/home_screen.dart';
 import '../screens/clients/add_client_screen.dart';
+import '../screens/clients/edit_client_screen.dart';
 import '../screens/clients/client_profile_screen.dart';
 import '../screens/simple_photo_notes_screen.dart';
 import '../screens/visits/visit_details_screen.dart';
@@ -121,6 +122,15 @@ class AppRouter {
           return VisitDetailsScreen(visitId: visitId);
         },
       ),
+      // Edit client route
+      GoRoute(
+        path: '/clients/:clientId/edit',
+        name: 'edit_client',
+        builder: (context, state) {
+          final clientId = state.pathParameters['clientId']!;
+          return EditClientScreen(clientId: clientId);
+        },
+      ),
       // Full gallery accessible from settings
       GoRoute(
         path: '/gallery',
@@ -145,23 +155,36 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   @override
   void initState() {
     super.initState();
-    // Preload Loved Styles data when main navigation initializes
+    // Initialize providers when main navigation initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preloadLovedStylesData();
+      _initializeProviders();
     });
   }
 
-  Future<void> _preloadLovedStylesData() async {
+  Future<void> _initializeProviders() async {
     // Small delay to ensure main navigation is fully settled
     await Future.delayed(const Duration(milliseconds: 500));
 
     // Check if widget is still mounted before using context
     if (!mounted) return;
 
-    // Run preloading in background without blocking UI
-    LovedStylesScreen.preloadLovedStylesData(context).catchError((e) {
-      debugPrint('Background preload failed: $e');
-    });
+    // Initialize stores provider first (needed for store data)
+    try {
+      final storesProvider = context.read<StoresProvider>();
+      if (!storesProvider.hasStores && !storesProvider.isLoading) {
+        await storesProvider.initialize();
+        debugPrint('StoresProvider initialized successfully');
+      }
+    } catch (e) {
+      debugPrint('Failed to initialize StoresProvider: $e');
+    }
+
+    // Preload Loved Styles data in background without blocking UI
+    if (mounted) {
+      LovedStylesScreen.preloadLovedStylesData(context).catchError((e) {
+        debugPrint('Background preload failed: $e');
+      });
+    }
   }
 
   @override

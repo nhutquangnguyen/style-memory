@@ -306,23 +306,13 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
       isLoading: _isLoading,
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Loved Styles (${_getLovedVisitsCount()})'),
+          title: Text(l10n.lovedStyles),
           automaticallyImplyLeading: false,
           actions: [
             IconButton(
               onPressed: _toggleSearchBar,
               icon: Icon(_showSearchBar ? Icons.search_off : Icons.search),
               tooltip: _showSearchBar ? 'Hide Search' : 'Search Styles',
-            ),
-            IconButton(
-              onPressed: () {
-                // Clear cache and force refresh
-                _cachedLovedPhotos = null;
-                _lastCacheTime = null;
-                _loadLovedStyles();
-              },
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh Loved Styles',
             ),
           ],
         ),
@@ -554,10 +544,6 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
     return photosToUse.where((photo) => photo.visit.id == visit.id).toList();
   }
 
-  int _getLovedVisitsCount() {
-    if (_lovedPhotos.isEmpty) return 0;
-    return _getUniqueVisits().length;
-  }
 
   Widget _buildVisitCard(Visit visit, AppLocalizations l10n) {
     final client = _lovedPhotos.firstWhere((p) => p.visit.id == visit.id).client;
@@ -584,58 +570,58 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
           padding: const EdgeInsets.all(AppTheme.spacingMedium),
           child: Row(
             children: [
-              // Photo thumbnail (if available)
-              if (mainPhoto?.photoUrl != null) ...[
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey[300],
-                  ),
-                  clipBehavior: Clip.hardEdge,
-                  child: CachedImage(
-                    imageUrl: mainPhoto!.photoUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                    errorWidget: Container(
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.broken_image,
-                        color: Colors.grey[600],
-                        size: 20,
-                      ),
-                    ),
+              // Photo thumbnail (similar to client avatar)
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusXl),
+                  color: mainPhoto?.photoUrl != null ? null : AppTheme.primaryColor.withValues(alpha: 0.1),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                    width: 2,
                   ),
                 ),
-                const SizedBox(width: AppTheme.spacingMedium),
-              ],
+                clipBehavior: Clip.hardEdge,
+                child: mainPhoto?.photoUrl != null
+                    ? CachedImage(
+                        imageUrl: mainPhoto!.photoUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: Container(
+                          color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                          child: Icon(
+                            Icons.broken_image,
+                            color: AppTheme.primaryColor,
+                            size: 24,
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          client.initials,
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primaryColor,
+                          ),
+                        ),
+                      ),
+              ),
+              const SizedBox(width: AppTheme.spacingMedium),
 
               // Visit details
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Client name and service (if any) in top row
                     Row(
                       children: [
-                        Icon(
-                          Icons.person,
-                          size: 16,
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.clientColon,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.secondaryTextColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
                         Expanded(
                           child: Text(
                             client.fullName,
@@ -644,116 +630,57 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: AppTheme.secondaryTextColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.dateColon,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.secondaryTextColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          visit.formattedVisitDate(l10n),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.primaryTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Consumer<ServiceProvider>(
-                      builder: (context, serviceProvider, child) {
-                        final service = visit.serviceId != null && visit.serviceId!.isNotEmpty
-                            ? serviceProvider.getServiceById(visit.serviceId!)
-                            : null;
-                        return Row(
-                          children: [
-                            Icon(
-                              Icons.design_services,
-                              size: 16,
-                              color: AppTheme.secondaryTextColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              l10n.serviceColon,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.secondaryTextColor,
-                                fontWeight: FontWeight.w500,
+                        // Service badge (only if service exists)
+                        Consumer<ServiceProvider>(
+                          builder: (context, serviceProvider, child) {
+                            final service = visit.serviceId != null && visit.serviceId!.isNotEmpty
+                                ? serviceProvider.getServiceById(visit.serviceId!)
+                                : null;
+
+                            if (service == null) {
+                              return const SizedBox.shrink();
+                            }
+
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
                               ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                service?.name ?? 'Styling session',
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.primaryTextColor,
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                                  width: 1,
                                 ),
                               ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                    if (visit.notes != null && visit.notes!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.notes,
-                            size: 16,
-                            color: AppTheme.secondaryTextColor,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            l10n.notesColon,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.secondaryTextColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              visit.notes!,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppTheme.primaryTextColor,
+                              child: Text(
+                                service.name,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.primaryColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 4),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingXs),
+
+                    // Time at bottom (like client cards)
                     Row(
                       children: [
                         Icon(
-                          Icons.photo_library,
-                          size: 16,
+                          Icons.schedule_rounded,
+                          size: AppTheme.iconSm,
                           color: AppTheme.secondaryTextColor,
                         ),
-                        const SizedBox(width: 4),
+                        const SizedBox(width: AppTheme.spacingXs),
                         Text(
-                          l10n.photosColon,
+                          visit.simpleTimeFormat(l10n),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.secondaryTextColor,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          '${visit.photos?.length ?? 0} photo${(visit.photos?.length ?? 0) != 1 ? 's' : ''}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.primaryTextColor,
                           ),
                         ),
                       ],

@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _searchController = TextEditingController();
+  bool _showSearchBar = false;
 
   @override
   void initState() {
@@ -35,6 +36,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _toggleSearchBar() {
+    setState(() {
+      _showSearchBar = !_showSearchBar;
+      if (!_showSearchBar) {
+        _searchController.clear();
+        context.read<ClientsProvider>().updateSearchQuery('');
+      }
+    });
   }
 
   @override
@@ -55,30 +66,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  onPressed: _toggleSearchBar,
+                  icon: Icon(_showSearchBar ? Icons.search_off : Icons.search),
+                  tooltip: _showSearchBar ? 'Hide Search' : 'Search Clients',
+                ),
+              ],
             ),
             body: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Search bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppTheme.spacingMedium,
-                    AppTheme.spacingLarge,
-                    AppTheme.spacingMedium,
-                    AppTheme.spacingMedium,
+                // Search bar (conditionally visible)
+                if (_showSearchBar)
+                  Padding(
+                    padding: const EdgeInsets.all(AppTheme.spacingMedium),
+                    child: ModernSearchInput(
+                      hint: l10n.searchByNamePhoneEmail,
+                      controller: _searchController,
+                      onChanged: (query) {
+                        clientsProvider.updateSearchQuery(query);
+                      },
+                      onClear: () {
+                        _searchController.clear();
+                        clientsProvider.updateSearchQuery('');
+                      },
+                    ),
                   ),
-                  child: ModernSearchInput(
-                    hint: l10n.searchByNamePhoneEmail,
-                    controller: _searchController,
-                    onChanged: (query) {
-                      clientsProvider.updateSearchQuery(query);
-                    },
-                    onClear: () {
-                      _searchController.clear();
-                      clientsProvider.updateSearchQuery('');
-                    },
-                  ),
-                ),
 
                 // Error banner
                 if (clientsProvider.errorMessage != null)
@@ -92,9 +106,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       onRetry: () => clientsProvider.refresh(),
                     ),
                   ),
-
-                // Section header with count
-                _buildSectionHeader(clientsProvider, l10n),
 
                 // Clients list
                 Expanded(
@@ -111,39 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       },
-    );
-  }
-
-
-  Widget _buildSectionHeader(ClientsProvider clientsProvider, AppLocalizations l10n) {
-    final filteredCount = clientsProvider.filteredClients.length;
-    final totalCount = clientsProvider.clients.length;
-    final isFiltered = clientsProvider.searchQuery.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppTheme.spacingMedium,
-        AppTheme.spacingLarge,
-        AppTheme.spacingMedium,
-        AppTheme.spacingSmall,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              isFiltered ? l10n.searchResults : l10n.allClients,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          ModernBadge(
-            text: isFiltered ? '$filteredCount ${l10n.found}' : '$totalCount ${l10n.total}',
-            variant: isFiltered ? ModernBadgeVariant.info : ModernBadgeVariant.neutral,
-            size: ModernBadgeSize.small,
-          ),
-        ],
-      ),
     );
   }
 
@@ -248,7 +226,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(
           AppTheme.spacingMedium,
-          0,
+          AppTheme.spacingMedium, // Add top spacing to match loved styles tab
           AppTheme.spacingMedium,
           AppTheme.spacing4xl, // Extra space for FAB
         ),
@@ -378,7 +356,7 @@ class _ModernClientCard extends StatelessWidget {
                               ),
                               const SizedBox(width: AppTheme.spacingXs),
                               Text(
-                                '${l10n.lastVisit} ${lastVisit.formattedVisitDate(l10n)}',
+                                lastVisit.simpleTimeFormat(l10n),
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: AppTheme.secondaryTextColor,
                                 ),

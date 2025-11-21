@@ -587,9 +587,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
   void _showEditClientDialog(BuildContext context, Client client) {
-    // TODO: Implement edit client dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit client feature coming soon')),
+    context.goNamed(
+      'edit_client',
+      pathParameters: {'clientId': client.id},
     );
   }
 

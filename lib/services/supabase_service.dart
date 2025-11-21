@@ -406,6 +406,82 @@ class SupabaseService {
     await _client.from('photos').delete().eq('id', photoId);
   }
 
+  // Store methods
+  static Future<List<Store>> getUserStores() async {
+    final userId = currentUser?.id;
+    if (userId == null) return [];
+
+    final response = await _client
+        .from('stores')
+        .select('*')
+        .eq('owner_id', userId);
+
+    return (response as List)
+        .map((store) => Store.fromJson(store))
+        .toList();
+  }
+
+  static Future<Store?> getStore(String storeId) async {
+    final response = await _client
+        .from('stores')
+        .select('*')
+        .eq('id', storeId)
+        .single();
+
+    if (response.isEmpty) return null;
+
+    return Store.fromJson(response);
+  }
+
+  static Future<Store> createStore(Store store) async {
+    final userId = currentUser?.id;
+    if (userId == null) throw Exception('User not authenticated');
+
+    final now = DateTime.now().toIso8601String();
+
+    final storeData = {
+      'id': store.id,
+      'owner_id': userId,
+      'name': store.name,
+      'phone': store.phone,
+      'address': store.address,
+      'created_at': now,
+      'updated_at': now,
+    };
+
+    final response = await _client
+        .from('stores')
+        .insert(storeData)
+        .select()
+        .single();
+
+    return Store.fromJson(response);
+  }
+
+  static Future<Store> updateStore(Store store) async {
+    final now = DateTime.now().toIso8601String();
+
+    final storeData = {
+      'name': store.name,
+      'phone': store.phone,
+      'address': store.address,
+      'updated_at': now,
+    };
+
+    final response = await _client
+        .from('stores')
+        .update(storeData)
+        .eq('id', store.id)
+        .select()
+        .single();
+
+    return Store.fromJson(response);
+  }
+
+  static Future<void> deleteStore(String storeId) async {
+    await _client.from('stores').delete().eq('id', storeId);
+  }
+
   // Utility methods
   static Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 }

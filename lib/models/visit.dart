@@ -135,6 +135,24 @@ class Visit {
     }
   }
 
+  // Helper method to get simple time format for client cards
+  String simpleTimeFormat(AppLocalizations l10n) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final visitDay = DateTime(visitDate.year, visitDate.month, visitDate.day);
+
+    // Format time as HH:MM
+    final timeStr = '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
+
+    if (visitDay.isAtSameMomentAs(today)) {
+      // Today: just show time
+      return timeStr;
+    } else {
+      // Other days: show date + time
+      return '${visitDate.day}/${visitDate.month}/${visitDate.year} at $timeStr';
+    }
+  }
+
   // Helper method to get short service description
   String get shortDescription {
     if (serviceName != null && serviceName!.isNotEmpty) {

@@ -23,19 +23,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadPackageInfo();
-    // Initialize store provider after the build phase
+    // Initialize stores provider after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeStoreProvider();
+      _initializeStoresProvider();
     });
   }
 
-  Future<void> _initializeStoreProvider() async {
+  Future<void> _initializeStoresProvider() async {
     if (!mounted) return;
 
-    // Initialize store provider if not already done
-    final storeProvider = context.read<StoreProvider>();
-    if (!storeProvider.isStoreInfoCustomized && !storeProvider.isLoading) {
-      await storeProvider.initialize();
+    try {
+      // Initialize stores provider if not already done
+      final storesProvider = context.read<StoresProvider>();
+      if (!storesProvider.hasStores && !storesProvider.isLoading) {
+        await storesProvider.initialize();
+      }
+    } catch (e) {
+      debugPrint('Failed to initialize stores provider: $e');
     }
 
     // Initialize language provider
@@ -109,16 +113,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Store Information section
               _buildSectionHeader(context, l10n.storeInformation),
-              Consumer<StoreProvider>(
-                builder: (context, storeProvider, child) {
+              Consumer<StoresProvider>(
+                builder: (context, storesProvider, child) {
+                  final currentStore = storesProvider.currentStore;
+
+                  if (storesProvider.isLoading) {
+                    return const Padding(
+                      padding: EdgeInsets.all(AppTheme.spacingMedium),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  if (currentStore == null) {
+                    return Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+                      child: Text(
+                        'No store information available',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppTheme.mutedTextColor,
+                        ),
+                      ),
+                    );
+                  }
+
                   return Column(
                     children: [
                       _buildAccountTile(
                         context,
                         icon: Icons.store_outlined,
                         title: l10n.storeName,
-                        subtitle: storeProvider.storeInfo.name.isNotEmpty
-                          ? storeProvider.storeInfo.name
+                        subtitle: currentStore.name.isNotEmpty
+                          ? currentStore.name
                           : l10n.tapToAddStoreName,
                         onTap: () => _showEditStoreNameDialog(context),
                       ),
@@ -126,8 +151,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context,
                         icon: Icons.phone_outlined,
                         title: l10n.phone,
-                        subtitle: storeProvider.storeInfo.phone.isNotEmpty
-                          ? storeProvider.storeInfo.phone
+                        subtitle: currentStore.phone.isNotEmpty
+                          ? currentStore.phone
                           : l10n.tapToAddPhone,
                         onTap: () => _showEditStorePhoneDialog(context),
                       ),
@@ -135,8 +160,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context,
                         icon: Icons.location_on_outlined,
                         title: l10n.address,
-                        subtitle: storeProvider.storeInfo.address.isNotEmpty
-                          ? storeProvider.storeInfo.address
+                        subtitle: currentStore.address.isNotEmpty
+                          ? currentStore.address
                           : l10n.tapToAddAddress,
                         onTap: () => _showEditStoreAddressDialog(context),
                       ),
@@ -340,8 +365,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showEditStoreNameDialog(BuildContext context) {
-    final storeProvider = context.read<StoreProvider>();
-    final controller = TextEditingController(text: storeProvider.storeInfo.name);
+    final storesProvider = context.read<StoresProvider>();
+    final currentStore = storesProvider.currentStore;
+    final controller = TextEditingController(text: currentStore?.name ?? '');
     final l10n = AppLocalizations.of(context)!;
 
     showDialog(
@@ -366,12 +392,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final newName = controller.text.trim();
               if (newName.isNotEmpty) {
                 try {
-                  await storeProvider.updateStoreName(newName);
+                  final success = await storesProvider.updateStoreName(newName);
                   if (context.mounted) {
                     Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(AppLocalizations.of(context)!.storeNameUpdated)),
-                    );
+                    if (success) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppLocalizations.of(context)!.storeNameUpdated)),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(storesProvider.errorMessage ?? AppLocalizations.of(context)!.failedToUpdateStoreName)),
+                      );
+                    }
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -391,8 +423,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showEditStorePhoneDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final storeProvider = context.read<StoreProvider>();
-    final controller = TextEditingController(text: storeProvider.storeInfo.phone);
+    final storesProvider = context.read<StoresProvider>();
+    final currentStore = storesProvider.currentStore;
+    final controller = TextEditingController(text: currentStore?.phone ?? '');
 
     showDialog(
       context: context,
@@ -415,12 +448,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               final newPhone = controller.text.trim();
               try {
-                await storeProvider.updateStorePhone(newPhone);
+                final success = await storesProvider.updateStorePhone(newPhone);
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Phone number updated successfully')),
-                  );
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Phone number updated successfully')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(storesProvider.errorMessage ?? 'Failed to update phone number')),
+                    );
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -439,8 +478,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showEditStoreAddressDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final storeProvider = context.read<StoreProvider>();
-    final controller = TextEditingController(text: storeProvider.storeInfo.address);
+    final storesProvider = context.read<StoresProvider>();
+    final currentStore = storesProvider.currentStore;
+    final controller = TextEditingController(text: currentStore?.address ?? '');
 
     showDialog(
       context: context,
@@ -465,12 +505,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               final newAddress = controller.text.trim();
               try {
-                await storeProvider.updateStoreAddress(newAddress);
+                final success = await storesProvider.updateStoreAddress(newAddress);
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Address updated successfully')),
-                  );
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Address updated successfully')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(storesProvider.errorMessage ?? 'Failed to update address')),
+                    );
+                  }
                 }
               } catch (e) {
                 if (context.mounted) {
