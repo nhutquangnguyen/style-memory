@@ -6,11 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/visit.dart';
 import '../models/photo.dart';
+import '../l10n/app_localizations.dart';
 
 class ShareService {
   /// Share all photos from a visit with visit details
   static Future<void> shareVisitPhotos(Visit visit, List<String> photoUrls, BuildContext context, {Rect? sharePositionOrigin}) async {
     try {
+      final l10n = AppLocalizations.of(context)!;
       if (photoUrls.isEmpty) {
         if (context.mounted) {
           _showMessage(context, 'No photos to share');
@@ -61,7 +63,7 @@ class ShareService {
       await Share.shareXFiles(
         photoFiles,
         // text: shareText,
-        subject: 'Hair Styling Session - ${visit.formattedVisitDate}',
+        subject: 'Hair Styling Session - ${visit.formattedVisitDate(l10n)}',
         sharePositionOrigin: sharePositionOrigin ?? const Rect.fromLTWH(0, 0, 100, 100),
       );
 

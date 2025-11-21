@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../l10n/app_localizations.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -47,11 +48,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   String? _validatePassword(String? value) {
+    final l10n = AppLocalizations.of(context)!;
     if (value == null || value.isEmpty) {
-      return 'Password is required';
+      return l10n.passwordRequired;
     }
     if (value.length < 6) {
-      return 'Password must be at least 6 characters';
+      return l10n.passwordMustBe6Characters;
     }
     return null;
   }
@@ -59,14 +61,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return LoadingOverlay(
           isLoading: authProvider.isLoading,
-          message: 'Creating account...',
+          message: l10n.creatingAccount,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Create Account'),
+              title: Text(l10n.createAccount),
             ),
             body: SafeArea(
               child: Padding(
@@ -90,18 +94,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Email field (required)
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          hintText: 'Enter your email address',
+                        decoration: InputDecoration(
+                          labelText: l10n.email,
+                          hintText: l10n.enterYourEmail,
                         ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Email is required';
+                            return l10n.emailRequired;
                           }
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
-                            return 'Please enter a valid email address';
+                            return l10n.pleaseEnterValidEmail;
                           }
                           return null;
                         },
@@ -113,8 +117,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Choose a secure password',
+                          labelText: l10n.password,
+                          hintText: l10n.chooseSecurePassword,
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -138,9 +142,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Full name field (optional)
                       TextFormField(
                         controller: _fullNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name (optional)',
-                          hintText: 'Enter your full name',
+                        decoration: InputDecoration(
+                          labelText: l10n.fullNameOptional,
+                          hintText: l10n.enterYourFullName,
                         ),
                         textCapitalization: TextCapitalization.words,
                         textInputAction: TextInputAction.done,
@@ -152,7 +156,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       // Create account button
                       ElevatedButton(
                         onPressed: authProvider.isLoading ? null : _handleSignUp,
-                        child: const Text('Create Account'),
+                        child: Text(l10n.createAccount),
                       ),
 
                       const Spacer(),
@@ -162,14 +166,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Already have an account? ',
+                            l10n.alreadyHaveAccount,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           TextButton(
                             onPressed: () {
                               context.goNamed('login');
                             },
-                            child: const Text('Sign In'),
+                            child: Text(l10n.signIn),
                           ),
                         ],
                       ),

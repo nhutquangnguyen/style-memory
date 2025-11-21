@@ -8,6 +8,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../l10n/app_localizations.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -648,6 +649,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final currentPhoto = widget.photos[_currentIndex];
 
     return Scaffold(
@@ -663,7 +665,7 @@ class _PhotoViewerScreenState extends State<_PhotoViewerScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             Text(
-              currentPhoto.visit.formattedVisitDate,
+              currentPhoto.visit.formattedVisitDate(l10n),
               style: const TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ],

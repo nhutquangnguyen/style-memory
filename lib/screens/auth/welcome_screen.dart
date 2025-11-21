@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
@@ -35,14 +38,14 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: AppTheme.spacingLarge),
                   Text(
-                    'StyleMemory',
+                    l10n.appTitle,
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppTheme.spacingMedium),
                   Text(
-                    'Remember every client\'s style\nwith photos and notes',
+                    l10n.welcomeSubtitle,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppTheme.secondaryTextColor,
                       height: 1.5,
@@ -61,7 +64,7 @@ class WelcomeScreen extends StatelessWidget {
                   onPressed: () {
                     context.goNamed('login');
                   },
-                  child: const Text('Get Started'),
+                  child: Text(l10n.getStarted),
                 ),
               ),
 
@@ -75,11 +78,11 @@ class WelcomeScreen extends StatelessWidget {
                     onPressed: () {
                       // TODO: Implement terms and privacy
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Terms of Service')),
+                        SnackBar(content: Text(l10n.termsOfService)),
                       );
                     },
                     child: Text(
-                      'Terms',
+                      l10n.termsOfService,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.primaryButtonColor,
                       ),
@@ -93,11 +96,11 @@ class WelcomeScreen extends StatelessWidget {
                     onPressed: () {
                       // TODO: Implement privacy policy
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Privacy Policy')),
+                        SnackBar(content: Text(l10n.privacyPolicy)),
                       );
                     },
                     child: Text(
-                      'Privacy',
+                      l10n.privacyPolicy,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         color: AppTheme.primaryButtonColor,
                       ),

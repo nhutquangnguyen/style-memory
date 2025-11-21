@@ -9,6 +9,7 @@ import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/modern_input.dart';
+import '../../l10n/app_localizations.dart';
 
 class LovedStylesScreen extends StatefulWidget {
   const LovedStylesScreen({super.key});
@@ -300,6 +301,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return LoadingOverlay(
       isLoading: _isLoading,
       child: Scaffold(
@@ -334,14 +336,14 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                   onRetry: _loadLovedStyles,
                 ),
               ),
-            if (_showSearchBar) _buildSearchBar(),
+            if (_showSearchBar) _buildSearchBar(l10n),
             if ((_showSearchBar ? _filteredPhotos : _lovedPhotos).isEmpty && !_isLoading)
               _buildEmptyState()
             else
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _loadLovedStyles,
-                  child: _buildPhotoGrid(),
+                  child: _buildPhotoGrid(l10n),
                 ),
               ),
           ],
@@ -405,7 +407,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
       decoration: BoxDecoration(
@@ -422,8 +424,8 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
           // Search input
           ModernInput(
             controller: _searchController,
-            label: 'Search by client name',
-            hint: 'Enter client name...',
+            label: l10n.searchByClientName,
+            hint: l10n.enterClientName,
             prefixIcon: const Icon(Icons.search),
             suffixIcon: _searchController.text.isNotEmpty
                 ? IconButton(
@@ -501,7 +503,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
     );
   }
 
-  Widget _buildPhotoGrid() {
+  Widget _buildPhotoGrid(AppLocalizations l10n) {
     return ListView.builder(
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
       itemCount: _getUniqueVisits().length,
@@ -511,7 +513,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
         // Progressive preloading: preload images for upcoming cards
         _progressivePreloadImages(index);
 
-        return _buildVisitCard(visit);
+        return _buildVisitCard(visit, l10n);
       },
     );
   }
@@ -557,7 +559,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
     return _getUniqueVisits().length;
   }
 
-  Widget _buildVisitCard(Visit visit) {
+  Widget _buildVisitCard(Visit visit, AppLocalizations l10n) {
     final client = _lovedPhotos.firstWhere((p) => p.visit.id == visit.id).client;
     final visitPhotos = _getPhotosForVisit(visit);
     final mainPhoto = visitPhotos.isNotEmpty ? visitPhotos.first : null;
@@ -628,7 +630,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Client: ',
+                          l10n.clientColon,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.secondaryTextColor,
                             fontWeight: FontWeight.w500,
@@ -654,14 +656,14 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Date: ',
+                          l10n.dateColon,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.secondaryTextColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                         Text(
-                          visit.formattedVisitDate,
+                          visit.formattedVisitDate(l10n),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.primaryTextColor,
                           ),
@@ -683,7 +685,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Service: ',
+                              l10n.serviceColon,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: AppTheme.secondaryTextColor,
                                 fontWeight: FontWeight.w500,
@@ -713,7 +715,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            'Notes: ',
+                            l10n.notesColon,
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.secondaryTextColor,
                               fontWeight: FontWeight.w500,
@@ -742,7 +744,7 @@ class _LovedStylesScreenState extends State<LovedStylesScreen> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'Photos: ',
+                          l10n.photosColon,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppTheme.secondaryTextColor,
                             fontWeight: FontWeight.w500,

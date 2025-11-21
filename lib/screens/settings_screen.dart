@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
+import '../l10n/app_localizations.dart';
 import 'staff/staff_list_screen.dart';
 import 'services/service_list_screen.dart';
 
@@ -36,6 +37,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!storeProvider.isStoreInfoCustomized && !storeProvider.isLoading) {
       await storeProvider.initialize();
     }
+
+    // Initialize language provider
+    if (mounted) {
+      final languageProvider = context.read<LanguageProvider>();
+      if (!languageProvider.isLoading) {
+        await languageProvider.initialize();
+      }
+    }
   }
 
   Future<void> _loadPackageInfo() async {
@@ -66,23 +75,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Settings'),
+            title: Text(l10n.settings),
             automaticallyImplyLeading: false,
           ),
           body: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMedium),
             children: [
               // Account section
-              _buildSectionHeader(context, 'Account'),
+              _buildSectionHeader(context, l10n.account),
               if (authProvider.userProfile != null) ...[
                 _buildAccountTile(
                   context,
                   icon: Icons.email_outlined,
-                  title: 'Email',
+                  title: l10n.email,
                   subtitle: authProvider.userProfile!.email,
                   onTap: () => _showEditEmailDialog(context),
                 ),
@@ -90,14 +101,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _buildAccountTile(
                     context,
                     icon: Icons.person_outline,
-                    title: 'Full Name',
+                    title: l10n.fullName,
                     subtitle: authProvider.userProfile!.fullName!,
                     onTap: () => _showEditNameDialog(context),
                   ),
               ],
 
               // Store Information section
-              _buildSectionHeader(context, 'Store Information'),
+              _buildSectionHeader(context, l10n.storeInformation),
               Consumer<StoreProvider>(
                 builder: (context, storeProvider, child) {
                   return Column(
@@ -105,28 +116,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildAccountTile(
                         context,
                         icon: Icons.store_outlined,
-                        title: 'Store Name',
+                        title: l10n.storeName,
                         subtitle: storeProvider.storeInfo.name.isNotEmpty
                           ? storeProvider.storeInfo.name
-                          : 'Tap to add store name',
+                          : l10n.tapToAddStoreName,
                         onTap: () => _showEditStoreNameDialog(context),
                       ),
                       _buildAccountTile(
                         context,
                         icon: Icons.phone_outlined,
-                        title: 'Phone',
+                        title: l10n.phone,
                         subtitle: storeProvider.storeInfo.phone.isNotEmpty
                           ? storeProvider.storeInfo.phone
-                          : 'Tap to add phone number',
+                          : l10n.tapToAddPhone,
                         onTap: () => _showEditStorePhoneDialog(context),
                       ),
                       _buildAccountTile(
                         context,
                         icon: Icons.location_on_outlined,
-                        title: 'Address',
+                        title: l10n.address,
                         subtitle: storeProvider.storeInfo.address.isNotEmpty
                           ? storeProvider.storeInfo.address
-                          : 'Tap to add address',
+                          : l10n.tapToAddAddress,
                         onTap: () => _showEditStoreAddressDialog(context),
                       ),
                     ],
@@ -134,94 +145,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
 
+              // Language section
+              _buildSectionHeader(context, l10n.language),
+              Consumer<LanguageProvider>(
+                builder: (context, languageProvider, child) {
+                  return _buildAccountTile(
+                    context,
+                    icon: Icons.language,
+                    title: l10n.language,
+                    subtitle: languageProvider.currentLanguageName,
+                    onTap: () => _showLanguageDialog(context),
+                  );
+                },
+              ),
+
               // Management section
-              _buildSectionHeader(context, 'Management'),
+              _buildSectionHeader(context, l10n.management),
               _buildAccountTile(
                 context,
                 icon: Icons.group_work,
-                title: 'Staff Management',
-                subtitle: 'Manage your team members',
+                title: l10n.staffManagement,
+                subtitle: l10n.manageTeamMembers,
                 onTap: () => _navigateToStaffManagement(context),
               ),
               _buildAccountTile(
                 context,
                 icon: Icons.design_services,
-                title: 'Service Management',
-                subtitle: 'Manage your services and pricing',
+                title: l10n.serviceManagement,
+                subtitle: l10n.manageServicesAndPricing,
                 onTap: () => _navigateToServiceManagement(context),
               ),
 
               // Subscription section (placeholder)
-              _buildSectionHeader(context, 'Subscription'),
+              _buildSectionHeader(context, l10n.subscription),
               _buildInfoTile(
                 context,
                 icon: Icons.workspace_premium_outlined,
-                title: 'Current Plan',
-                subtitle: 'Free Plan',
+                title: l10n.currentPlan,
+                subtitle: l10n.freePlan,
               ),
               _buildActionTile(
                 context,
                 icon: Icons.upgrade_outlined,
-                title: 'Manage Subscription',
+                title: l10n.manageSubscription,
                 onTap: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Subscription management coming soon')),
+                    SnackBar(content: Text(l10n.comingSoon)),
                   );
                 },
               ),
 
-              // Help & Support section
-              _buildSectionHeader(context, 'Help & Support'),
-              _buildActionTile(
-                context,
-                icon: Icons.help_outline,
-                title: 'FAQ',
-                onTap: () => _showFAQDialog(context),
-              ),
-              _buildActionTile(
-                context,
-                icon: Icons.contact_support_outlined,
-                title: 'Contact Support',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Contact support: support@stylememory.com')),
-                  );
-                },
-              ),
-              _buildActionTile(
-                context,
-                icon: Icons.school_outlined,
-                title: 'How to Use StyleMemory',
-                onTap: () => _showHelpDialog(context),
-              ),
 
               // About section
-              _buildSectionHeader(context, 'About'),
-              _buildActionTile(
-                context,
-                icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Privacy Policy')),
-                  );
-                },
-              ),
-              _buildActionTile(
-                context,
-                icon: Icons.gavel_outlined,
-                title: 'Terms of Service',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Terms of Service')),
-                  );
-                },
-              ),
+              _buildSectionHeader(context, l10n.about),
               _buildInfoTile(
                 context,
                 icon: Icons.info_outline,
-                title: 'App Version',
-                subtitle: _packageInfo?.version ?? 'Loading...',
+                title: l10n.appVersion,
+                subtitle: _packageInfo?.version ?? l10n.loading,
               ),
 
               const SizedBox(height: AppTheme.spacingLarge),
@@ -235,7 +216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     foregroundColor: AppTheme.errorColor,
                     side: const BorderSide(color: AppTheme.errorColor),
                   ),
-                  child: const Text('Sign Out'),
+                  child: Text(l10n.signOut),
                 ),
               ),
             ],
@@ -317,6 +298,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   void _showLogoutDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -325,7 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -360,23 +342,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showEditStoreNameDialog(BuildContext context) {
     final storeProvider = context.read<StoreProvider>();
     final controller = TextEditingController(text: storeProvider.storeInfo.name);
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Store Name'),
+        title: Text(l10n.editStoreName),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Store Name',
-            hintText: 'Enter your store name',
+          decoration: InputDecoration(
+            labelText: l10n.storeName,
+            hintText: l10n.enterStoreName,
           ),
           textCapitalization: TextCapitalization.words,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -387,19 +370,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (context.mounted) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Store name updated successfully')),
+                      SnackBar(content: Text(AppLocalizations.of(context)!.storeNameUpdated)),
                     );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to update store name: $e')),
+                      SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateStoreName)),
                     );
                   }
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -407,17 +390,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showEditStorePhoneDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final storeProvider = context.read<StoreProvider>();
     final controller = TextEditingController(text: storeProvider.storeInfo.phone);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Phone Number'),
+        title: Text(l10n.editPhoneNumber),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Phone Number',
+          decoration: InputDecoration(
+            labelText: l10n.phoneNumber,
             hintText: 'Enter your phone number',
           ),
           keyboardType: TextInputType.phone,
@@ -425,7 +409,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -446,7 +430,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -454,17 +438,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showEditStoreAddressDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final storeProvider = context.read<StoreProvider>();
     final controller = TextEditingController(text: storeProvider.storeInfo.address);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Address'),
+        title: Text(l10n.editAddress),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Address',
+          decoration: InputDecoration(
+            labelText: l10n.address,
             hintText: 'Enter your store address',
           ),
           textCapitalization: TextCapitalization.words,
@@ -474,7 +459,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -495,78 +480,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(l10n.save),
           ),
         ],
       ),
     );
   }
 
-  void _showFAQDialog(BuildContext context) {
+  void _showLanguageDialog(BuildContext context) {
+    final languageProvider = context.read<LanguageProvider>();
+    final l10n = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Frequently Asked Questions'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Q: How do I add a new client?\n'
-                'A: Tap the "+" button on the Clients screen or use the "Add Client" button.\n\n'
-                'Q: How do I capture photos?\n'
-                'A: From a client\'s profile, tap "New Visit" or the camera icon.\n\n'
-                'Q: Can I edit client information?\n'
-                'A: Yes, tap the menu icon (⋮) on the client profile screen.\n\n'
-                'Q: How do I delete a visit?\n'
-                'A: Open the visit details and use the delete option in the menu.',
+        title: Text(l10n.selectLanguage),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: LanguageProvider.supportedLocales.map((locale) {
+            return ListTile(
+              leading: Radio<Locale>(
+                value: locale,
+                groupValue: languageProvider.currentLocale,
+                onChanged: (Locale? value) async {
+                  if (value != null && value != languageProvider.currentLocale) {
+                    try {
+                      await languageProvider.changeLanguage(value);
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Language updated successfully')),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to update language: $e')),
+                        );
+                      }
+                    }
+                  }
+                },
               ),
-            ],
-          ),
+              title: Text(languageProvider.getLanguageName(locale)),
+              onTap: () async {
+                if (locale != languageProvider.currentLocale) {
+                  try {
+                    await languageProvider.changeLanguage(locale);
+                    if (context.mounted) {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(AppLocalizations.of(context)!.languageUpdated)),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to update language: $e')),
+                      );
+                    }
+                  }
+                }
+              },
+            );
+          }).toList(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(l10n.cancel),
           ),
         ],
       ),
     );
   }
 
-  void _showHelpDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('How to Use StyleMemory'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '1. Add Clients\n'
-                'Start by adding your clients with their basic information.\n\n'
-                '2. Capture Photos\n'
-                'For each visit, capture 4 photos: front, back, left, and right views.\n\n'
-                '3. Add Notes\n'
-                'Include service details, products used, and any special notes.\n\n'
-                '4. Review History\n'
-                'View past visits and photos to remember previous styles.\n\n'
-                '5. Stay Organized\n'
-                'Use the search feature to quickly find clients.',
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Got it'),
-          ),
-        ],
-      ),
-    );
-  }
 }

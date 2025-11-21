@@ -11,6 +11,7 @@ import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
 import '../../widgets/photo_gallery_viewer.dart';
 import '../../services/share_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class VisitDetailsScreen extends StatefulWidget {
   final String visitId;
@@ -33,7 +34,9 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadVisit();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadVisit();
+    });
   }
 
   Future<void> _loadVisit() async {
@@ -55,6 +58,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -146,7 +150,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
                   const SizedBox(height: AppTheme.spacingLarge),
 
                   // Visit details
-                  _buildVisitDetails(),
+                  _buildVisitDetails(l10n),
                 ],
               ),
             ),
@@ -370,7 +374,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
     );
   }
 
-  Widget _buildVisitDetails() {
+  Widget _buildVisitDetails(AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppTheme.spacingLarge),
@@ -388,7 +392,7 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
             _buildDetailRow(
               icon: Icons.calendar_today,
               label: 'Date',
-              value: _visit!.formattedVisitDate,
+              value: _visit!.formattedVisitDate(l10n),
             ),
 
             if (_visit!.serviceId != null && _visit!.serviceId!.isNotEmpty)

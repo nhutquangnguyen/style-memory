@@ -13,6 +13,7 @@ import '../../widgets/common/star_rating.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
 import '../loved_styles/loved_styles_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class ClientProfileScreen extends StatefulWidget {
   final String clientId;
@@ -115,6 +116,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 
     return Consumer<VisitsProvider>(
       builder: (context, visitsProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         return LoadingOverlay(
           isLoading: visitsProvider.isLoading,
           child: Scaffold(
@@ -138,13 +140,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'edit',
-                      child: Text('Edit Client'),
+                      child: Text(l10n.editClient),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Text('Delete Client'),
+                      child: Text(l10n.deleteClient),
                     ),
                   ],
                 ),
@@ -164,11 +166,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                   ),
 
                 // Search bar
-                if (_showSearchBar) _buildSearchBar(),
+                if (_showSearchBar) _buildSearchBar(l10n),
 
                 // Visits section
                 Expanded(
-                  child: _buildVisitsList(visitsProvider, client),
+                  child: _buildVisitsList(visitsProvider, client, l10n),
                 ),
               ],
             ),
@@ -180,7 +182,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                 );
               },
               icon: Icons.camera_alt_rounded,
-              label: 'New Visit',
+              label: l10n.newVisit,
               gradient: AppTheme.primaryGradient,
             ),
           ),
@@ -190,15 +192,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   }
 
 
-  Widget _buildVisitsList(VisitsProvider visitsProvider, Client client) {
+  Widget _buildVisitsList(VisitsProvider visitsProvider, Client client, AppLocalizations l10n) {
     final allVisits = visitsProvider.getVisitsForClient(widget.clientId);
 
     if (allVisits.isEmpty && !visitsProvider.isLoading) {
       return EmptyState(
         icon: Icons.camera_alt_outlined,
-        title: 'No visits yet',
-        description: 'Start by capturing photos for ${client.fullName}\'s first visit',
-        actionText: 'New Visit',
+        title: l10n.noVisitsYet,
+        description: l10n.startByCaptureFirstVisit(client.fullName),
+        actionText: l10n.newVisit,
         onAction: () {
           context.goNamed(
             'capture_photos',
@@ -268,7 +270,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                         size: AppTheme.iconSm,
                       ),
                       const SizedBox(width: AppTheme.spacingSm),
-                      Text('Recent (${filteredVisits.length})'),
+                      Text('${l10n.recent} (${filteredVisits.length})'),
                     ],
                   ),
                 ),
@@ -282,7 +284,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                         size: AppTheme.iconSm,
                       ),
                       const SizedBox(width: AppTheme.spacingSm),
-                      Text('Loved (${filteredLovedVisits.length})'),
+                      Text('${l10n.loved} (${filteredLovedVisits.length})'),
                     ],
                   ),
                 ),
@@ -295,9 +297,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
             child: TabBarView(
               children: [
                 // Recent Visits Tab
-                _buildVisitsTabContent(filteredVisits, 'recent'),
+                _buildVisitsTabContent(filteredVisits, 'recent', l10n),
                 // Loved Visits Tab
-                _buildVisitsTabContent(filteredLovedVisits, 'loved'),
+                _buildVisitsTabContent(filteredLovedVisits, 'loved', l10n),
               ],
             ),
           ),
@@ -365,7 +367,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         .toList();
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
       decoration: BoxDecoration(
@@ -382,8 +384,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           // Search input for notes
           ModernInput(
             controller: _searchController,
-            label: 'Search by notes or service',
-            hint: 'Enter search terms...',
+            label: l10n.searchByNotesOrService,
+            hint: l10n.enterSearchTerms,
             prefixIcon: const Icon(Icons.search),
             onChanged: (_) => setState(() {}), // Trigger rebuild for filtering
             suffixIcon: _searchController.text.isNotEmpty
@@ -432,9 +434,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                         underline: const SizedBox.shrink(),
                         hint: const Text('Filter by service'),
                         items: [
-                          const DropdownMenuItem<String>(
+                          DropdownMenuItem<String>(
                             value: null,
-                            child: Text('All Services'),
+                            child: Text(l10n.allServices),
                           ),
                           ...availableServices.map((service) => DropdownMenuItem<String>(
                             value: service.id,
@@ -453,7 +455,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                   IconButton(
                     onPressed: _clearFilters,
                     icon: const Icon(Icons.clear_all),
-                    tooltip: 'Clear Filters',
+                    tooltip: l10n.clearFilters,
                   ),
                 ],
               );
@@ -464,7 +466,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  Widget _buildVisitsTabContent(List<Visit> visits, String tabType) {
+  Widget _buildVisitsTabContent(List<Visit> visits, String tabType, AppLocalizations l10n) {
     if (visits.isEmpty) {
       if (tabType == 'loved') {
         return _buildEmptyLovedState();
@@ -485,6 +487,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           return _VisitCard(
             visit: visit,
             onToggleLoved: _toggleLovedVisit,
+            l10n: l10n,
           );
         },
       ),
@@ -706,10 +709,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
 class _VisitCard extends StatelessWidget {
   final Visit visit;
   final void Function(Visit) onToggleLoved;
+  final AppLocalizations l10n;
 
   const _VisitCard({
     required this.visit,
     required this.onToggleLoved,
+    required this.l10n,
   });
 
   @override
@@ -747,7 +752,7 @@ class _VisitCard extends StatelessWidget {
                         ),
                         const SizedBox(width: AppTheme.spacingVerySmall),
                         Text(
-                          'Date: ',
+                          l10n.dateColon,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: AppTheme.secondaryTextColor,
                             fontWeight: FontWeight.w500,
@@ -755,7 +760,7 @@ class _VisitCard extends StatelessWidget {
                         ),
                         Expanded(
                           child: Text(
-                            visit.formattedVisitDate,
+                            visit.formattedVisitDate(l10n),
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -793,7 +798,7 @@ class _VisitCard extends StatelessWidget {
                   ),
                   const SizedBox(width: AppTheme.spacingVerySmall),
                   Text(
-                    'Service: ',
+                    l10n.serviceColon,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppTheme.secondaryTextColor,
                       fontWeight: FontWeight.w500,
@@ -1004,7 +1009,7 @@ class _VisitCard extends StatelessWidget {
             ),
             const SizedBox(width: AppTheme.spacingVerySmall),
             Text(
-              'Staff: ',
+              '${l10n.staff}: ',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.secondaryTextColor,
                 fontWeight: FontWeight.w500,

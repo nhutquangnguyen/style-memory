@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../l10n/app_localizations.dart';
 
 class AddNotesScreen extends StatefulWidget {
   final String clientId;
@@ -75,6 +76,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final client = context.read<ClientsProvider>().getClientById(widget.clientId);
 
     if (client == null) {
@@ -136,7 +138,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
                                     ),
                                   ),
                                   Text(
-                                    'New Visit - ${_formatDate(_selectedDate)}',
+                                    'New Visit - ${_formatDate(_selectedDate, l10n)}',
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       color: AppTheme.secondaryTextColor,
                                     ),
@@ -164,7 +166,7 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
                         child: ListTile(
                           leading: const Icon(Icons.calendar_today),
                           title: const Text('Visit Date'),
-                          subtitle: Text(_formatDate(_selectedDate)),
+                          subtitle: Text(_formatDate(_selectedDate, l10n)),
                           trailing: const Icon(Icons.edit),
                           onTap: _selectDate,
                         ),
@@ -257,14 +259,14 @@ class _AddNotesScreenState extends State<AddNotesScreen> {
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(DateTime date, AppLocalizations l10n) {
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Today (${date.day}/${date.month}/${date.year})';
+      return '${l10n.today} (${date.day}/${date.month}/${date.year})';
     } else if (difference.inDays == 1) {
-      return 'Yesterday (${date.day}/${date.month}/${date.year})';
+      return '${l10n.yesterday} (${date.day}/${date.month}/${date.year})';
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }

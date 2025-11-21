@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import '../widgets/common/modern_card.dart';
 import '../widgets/common/modern_button.dart';
 import '../widgets/common/modern_input.dart';
+import '../l10n/app_localizations.dart';
 
 class SimplePhotoNotesScreen extends StatefulWidget {
   final Client client;
@@ -45,6 +46,8 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -52,7 +55,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Add Photos & Notes',
+              l10n.addPhotosAndNotes,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -79,8 +82,8 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
                   final activeStaff = staffProvider.activeStaff;
 
                   return ModernDropdown<Staff>(
-                    label: 'Staff Member',
-                    hint: 'Select staff member',
+                    label: l10n.staffMember,
+                    hint: l10n.selectStaffMember,
                     value: _selectedStaff,
                     items: activeStaff.map((staff) {
                       return DropdownMenuItem<Staff>(
@@ -149,8 +152,8 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
                   final activeServices = serviceProvider.activeServices;
 
                   return ModernDropdown<Service>(
-                    label: 'Service Type',
-                    hint: 'Select service type',
+                    label: l10n.serviceType,
+                    hint: l10n.selectServiceType,
                     value: _selectedService,
                     items: activeServices.map((service) {
                       return DropdownMenuItem<Service>(
@@ -204,8 +207,8 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
             ModernCard(
               child: ModernInput(
                 controller: _notesController,
-                label: 'Visit Notes',
-                hint: 'Add notes about the service, products used, client preferences, etc...',
+                label: l10n.visitNotes,
+                hint: l10n.addNotesAboutService,
                 maxLines: 4,
                 variant: ModernInputVariant.filled,
               ),
@@ -214,10 +217,12 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
             // Photo Selection Section
             ModernHeaderCard(
-              title: 'Photos',
+              title: l10n.photos,
               subtitle: _selectedImages.isEmpty
-                ? 'Add photos to document this visit'
-                : '${_selectedImages.length} photo${_selectedImages.length == 1 ? '' : 's'} selected',
+                ? l10n.addPhotosToDocument
+                : _selectedImages.length == 1
+                    ? l10n.onePhotoSelected
+                    : '${_selectedImages.length} photos selected',
               leading: Icon(
                 Icons.photo_camera_rounded,
                 color: AppTheme.primaryColor,
@@ -291,7 +296,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
                     children: [
                       Expanded(
                         child: ModernButton(
-                          text: 'Camera',
+                          text: l10n.camera,
                           onPressed: _pickFromCamera,
                           icon: Icons.camera_alt_rounded,
                           variant: ModernButtonVariant.primary,
@@ -300,7 +305,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
                       const SizedBox(width: AppTheme.spacingMedium),
                       Expanded(
                         child: ModernButton(
-                          text: 'Gallery',
+                          text: l10n.gallery,
                           onPressed: _pickFromGallery,
                           icon: Icons.photo_library_rounded,
                           variant: ModernButtonVariant.secondary,
@@ -316,7 +321,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
             // Save Button
             ModernButton(
-              text: _isUploading ? 'Saving Visit...' : 'Save Visit',
+              text: _isUploading ? l10n.savingVisit : l10n.saveVisit,
               onPressed: _isUploading ? null : _saveVisit,
               variant: ModernButtonVariant.success,
               icon: _isUploading ? null : Icons.save_rounded,
@@ -348,9 +353,10 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Camera error: ${e.toString()}'),
+            content: Text('${l10n.cameraError}: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -376,9 +382,10 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gallery error: ${e.toString()}'),
+            content: Text('${l10n.galleryError}: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -391,9 +398,10 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
   Future<void> _saveVisit() async {
     if (_selectedImages.isEmpty && _notesController.text.trim().isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one photo or some notes'),
+        SnackBar(
+          content: Text(l10n.pleaseAddPhotoOrNotes),
           backgroundColor: Colors.orange,
         ),
       );
@@ -467,10 +475,11 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
         // Check mounted again after async operation
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           navigator.pop();
           scaffoldMessenger.showSnackBar(
-            const SnackBar(
-              content: Text('Visit saved successfully!'),
+            SnackBar(
+              content: Text(l10n.visitSavedSuccessfully),
               backgroundColor: Colors.green,
             ),
           );
@@ -479,10 +488,11 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
     } catch (e) {
       if (mounted) {
         // Store context reference before potential async operations to avoid async context warnings
+        final l10n = AppLocalizations.of(context)!;
         final scaffoldMessenger = ScaffoldMessenger.of(context);
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text('Error saving visit: $e'),
+            content: Text('${l10n.errorSavingVisit}: $e'),
             backgroundColor: Colors.red,
           ),
         );

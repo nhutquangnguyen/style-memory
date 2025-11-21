@@ -11,6 +11,7 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/modern_card.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
+import '../../l10n/app_localizations.dart';
 
 class ServiceListScreen extends StatefulWidget {
   const ServiceListScreen({super.key});
@@ -30,6 +31,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<ServiceProvider>(
       builder: (context, serviceProvider, child) {
         return LoadingOverlay(
@@ -37,7 +39,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
           child: Scaffold(
             backgroundColor: AppTheme.backgroundColor,
             appBar: AppBar(
-              title: const Text('Service Management'),
+              title: Text(l10n.serviceManagement),
               actions: [
                 PopupMenuButton<String>(
                   onSelected: (value) {
@@ -50,16 +52,19 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
                         break;
                     }
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'show_all',
-                      child: Text('Show All Services'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'analytics',
-                      child: Text('Service Analytics'),
-                    ),
-                  ],
+                  itemBuilder: (context) {
+                    final l10n = AppLocalizations.of(context)!;
+                    return [
+                      PopupMenuItem(
+                        value: 'show_all',
+                        child: Text(l10n.showAllServices),
+                      ),
+                      PopupMenuItem(
+                        value: 'analytics',
+                        child: Text(l10n.serviceAnalytics),
+                      ),
+                    ];
+                  },
                 ),
               ],
             ),
@@ -78,7 +83,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
 
                 // Service list
                 Expanded(
-                  child: _buildServiceList(serviceProvider),
+                  child: _buildServiceList(serviceProvider, l10n),
                 ),
               ],
             ),
@@ -94,15 +99,15 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
     );
   }
 
-  Widget _buildServiceList(ServiceProvider serviceProvider) {
+  Widget _buildServiceList(ServiceProvider serviceProvider, AppLocalizations l10n) {
     final activeServices = serviceProvider.activeServices;
 
     if (activeServices.isEmpty && !serviceProvider.isLoading) {
       return EmptyState(
         icon: Icons.design_services_outlined,
-        title: 'No services yet',
-        description: 'Add your first service to get started',
-        actionText: 'Add Service',
+        title: l10n.noServicesYet,
+        description: l10n.addFirstService,
+        actionText: l10n.addService,
         onAction: () => _showAddServiceDialog(context),
       );
     }
@@ -133,17 +138,20 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 
   void _showAddServiceDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => _ServiceDialog(
-        title: 'Add Service',
+        title: l10n.addService,
         onSave: (service) async {
           final success = await context.read<ServiceProvider>().addService(service);
           if (success && mounted) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Service added successfully'),
+            final navigator = Navigator.of(context);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            navigator.pop();
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(l10n.serviceAddedSuccessfully),
                 backgroundColor: Colors.green,
               ),
             );
@@ -154,18 +162,21 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 
   void _showEditServiceDialog(BuildContext context, Service service) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => _ServiceDialog(
-        title: 'Edit Service',
+        title: l10n.editService,
         service: service,
         onSave: (updatedService) async {
           final success = await context.read<ServiceProvider>().updateService(updatedService);
           if (success && mounted) {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Service updated successfully'),
+            final navigator = Navigator.of(context);
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+            navigator.pop();
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(l10n.serviceUpdatedSuccessfully),
                 backgroundColor: Colors.green,
               ),
             );
@@ -180,32 +191,35 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 
   void _confirmDeleteService(BuildContext context, Service service) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Service'),
-        content: Text('Are you sure you want to delete "${service.name}"? This action cannot be undone.'),
+        title: Text(l10n.deleteService),
+        content: Text('${l10n.confirmDeleteService}'.replaceAll('{serviceName}', service.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
               final success = await context.read<ServiceProvider>().deleteService(service.id);
               if (mounted) {
-                Navigator.of(context).pop();
+                final navigator = Navigator.of(context);
+                final scaffoldMessenger = ScaffoldMessenger.of(context);
+                navigator.pop();
                 if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Service deleted successfully'),
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.serviceDeletedSuccessfully),
                       backgroundColor: Colors.orange,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -213,25 +227,26 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 
   void _showServiceAnalytics(BuildContext context, ServiceProvider serviceProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final stats = serviceProvider.getServiceStats();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Service Analytics'),
+        title: Text(l10n.serviceAnalytics),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _AnalyticRow('Total Services', '${stats['total_services']}'),
-            _AnalyticRow('Active Services', '${stats['active_services']}'),
-            _AnalyticRow('Inactive Services', '${stats['inactive_services']}'),
+            _AnalyticRow(l10n.totalServices, '${stats['total_services']}'),
+            _AnalyticRow(l10n.activeServices, '${stats['active_services']}'),
+            _AnalyticRow(l10n.inactiveServices, '${stats['inactive_services']}'),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(l10n.close),
           ),
         ],
       ),
@@ -308,16 +323,19 @@ class _ServiceCard extends StatelessWidget {
                       break;
                   }
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Text('Edit'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Delete'),
-                  ),
-                ],
+                itemBuilder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text(l10n.edit),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(l10n.delete),
+                    ),
+                  ];
+                },
               ),
             ],
           ),
@@ -360,6 +378,7 @@ class _ServiceDialogState extends State<_ServiceDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(widget.title),
       content: SizedBox(
@@ -369,23 +388,23 @@ class _ServiceDialogState extends State<_ServiceDialog> {
           children: [
             ModernInput(
               controller: _nameController,
-              label: 'Service Name',
-              hint: 'Enter service name',
-              prefixIcon: Icon(Icons.design_services_rounded),
+              label: l10n.serviceName,
+              hint: l10n.enterServiceName,
+              prefixIcon: const Icon(Icons.design_services_rounded),
             ),
           ],
         ),
       ),
       actions: [
         ModernButton(
-          text: 'Cancel',
+          text: l10n.cancel,
           onPressed: () => Navigator.of(context).pop(),
           variant: ModernButtonVariant.secondary,
           size: ModernButtonSize.small,
         ),
         const SizedBox(width: AppTheme.spacingSmall),
         ModernButton(
-          text: 'Save',
+          text: l10n.save,
           onPressed: _saveService,
           variant: ModernButtonVariant.success,
           size: ModernButtonSize.small,
@@ -396,9 +415,10 @@ class _ServiceDialogState extends State<_ServiceDialog> {
 
   void _saveService() {
     if (_nameController.text.trim().isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a service name'),
+        SnackBar(
+          content: Text(l10n.pleaseEnterServiceName),
           backgroundColor: Colors.orange,
         ),
       );

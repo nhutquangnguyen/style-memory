@@ -1,4 +1,5 @@
 import 'photo.dart';
+import '../l10n/app_localizations.dart';
 
 class Visit {
   final String id;
@@ -114,7 +115,7 @@ class Visit {
   }
 
   // Helper method to get formatted visit date
-  String get formattedVisitDate {
+  String formattedVisitDate(AppLocalizations l10n) {
     final now = DateTime.now();
     final difference = now.difference(visitDate);
 
@@ -122,9 +123,9 @@ class Visit {
     final timeStr = '${visitDate.hour.toString().padLeft(2, '0')}:${visitDate.minute.toString().padLeft(2, '0')}';
 
     if (difference.inDays == 0) {
-      return 'Today at $timeStr';
+      return '${l10n.today} at $timeStr';
     } else if (difference.inDays == 1) {
-      return 'Yesterday at $timeStr';
+      return '${l10n.yesterday} at $timeStr';
     } else if (difference.inDays < 7) {
       // Show actual date for recent visits
       return '${visitDate.day}/${visitDate.month}/${visitDate.year} at $timeStr';

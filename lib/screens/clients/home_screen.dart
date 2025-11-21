@@ -11,6 +11,7 @@ import '../../widgets/common/modern_card.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
 import '../../widgets/common/modern_badge.dart';
+import '../../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -38,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<ClientsProvider>(
       builder: (context, clientsProvider, child) {
         return LoadingOverlay(
@@ -46,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
             backgroundColor: AppTheme.backgroundColor,
             appBar: AppBar(
               title: Text(
-                'Your Clients',
+                l10n.yourClients,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -65,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     AppTheme.spacingMedium,
                   ),
                   child: ModernSearchInput(
-                    hint: 'Search by name, phone, or email...',
+                    hint: l10n.searchByNamePhoneEmail,
                     controller: _searchController,
                     onChanged: (query) {
                       clientsProvider.updateSearchQuery(query);
@@ -91,18 +94,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
 
                 // Section header with count
-                _buildSectionHeader(clientsProvider),
+                _buildSectionHeader(clientsProvider, l10n),
 
                 // Clients list
                 Expanded(
-                  child: _buildClientsList(clientsProvider),
+                  child: _buildClientsList(clientsProvider, l10n),
                 ),
               ],
             ),
             floatingActionButton: ModernFab(
               onPressed: () => context.goNamed('add_client'),
               icon: Icons.person_add_rounded,
-              label: 'Add Client',
+              label: l10n.addClient,
               gradient: AppTheme.primaryGradient,
             ),
           ),
@@ -112,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  Widget _buildSectionHeader(ClientsProvider clientsProvider) {
+  Widget _buildSectionHeader(ClientsProvider clientsProvider, AppLocalizations l10n) {
     final filteredCount = clientsProvider.filteredClients.length;
     final totalCount = clientsProvider.clients.length;
     final isFiltered = clientsProvider.searchQuery.isNotEmpty;
@@ -128,14 +131,14 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Expanded(
             child: Text(
-              isFiltered ? 'Search Results' : 'All Clients',
+              isFiltered ? l10n.searchResults : l10n.allClients,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
           ModernBadge(
-            text: isFiltered ? '$filteredCount found' : '$totalCount total',
+            text: isFiltered ? '$filteredCount ${l10n.found}' : '$totalCount ${l10n.total}',
             variant: isFiltered ? ModernBadgeVariant.info : ModernBadgeVariant.neutral,
             size: ModernBadgeSize.small,
           ),
@@ -144,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildClientsList(ClientsProvider clientsProvider) {
+  Widget _buildClientsList(ClientsProvider clientsProvider, AppLocalizations l10n) {
     final clients = clientsProvider.filteredClients;
 
     if (clients.isEmpty && !clientsProvider.isLoading) {
@@ -162,14 +165,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingMedium),
                 Text(
-                  'No clients found',
+                  l10n.noClientsFound,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: AppTheme.spacingSmall),
                 Text(
-                  'Try adjusting your search terms or add a new client.',
+                  l10n.tryAdjustingSearch,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppTheme.secondaryTextColor,
                   ),
@@ -177,7 +180,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingLarge),
                 ModernButton(
-                  text: 'Clear Search',
+                  text: l10n.clearSearch,
                   onPressed: () {
                     _searchController.clear();
                     clientsProvider.updateSearchQuery('');
@@ -210,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingLarge),
                 Text(
-                  'Welcome to Style Memory!',
+                  l10n.welcomeToStyleMemory,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -218,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingSmall),
                 Text(
-                  'Start by adding your first client to track their styles, preferences, and visit history.',
+                  l10n.startByAddingFirstClient,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: AppTheme.secondaryTextColor,
                   ),
@@ -226,7 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingExtraLarge),
                 ModernButton(
-                  text: 'Add Your First Client',
+                  text: l10n.addYourFirstClient,
                   onPressed: () => context.goNamed('add_client'),
                   icon: Icons.person_add_rounded,
                   fullWidth: true,
@@ -326,10 +329,15 @@ class _ModernClientCard extends StatelessWidget {
                           ),
                         ),
                         if (visitCount > 0)
-                          ModernBadge(
-                            text: '$visitCount visit${visitCount == 1 ? '' : 's'}',
-                            variant: ModernBadgeVariant.primary,
-                            size: ModernBadgeSize.small,
+                          Consumer<LanguageProvider>(
+                            builder: (context, languageProvider, child) {
+                              final l10n = AppLocalizations.of(context)!;
+                              return ModernBadge(
+                                text: '$visitCount ${visitCount == 1 ? l10n.visit : l10n.visits}',
+                                variant: ModernBadgeVariant.primary,
+                                size: ModernBadgeSize.small,
+                              );
+                            },
                           ),
                       ],
                     ),
@@ -357,41 +365,47 @@ class _ModernClientCard extends StatelessWidget {
                     ],
 
                     // Last visit info
-                    if (lastVisit != null)
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: AppTheme.iconSm,
-                            color: AppTheme.secondaryTextColor,
-                          ),
-                          const SizedBox(width: AppTheme.spacingXs),
-                          Text(
-                            'Last visit ${lastVisit.formattedVisitDate}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.secondaryTextColor,
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            size: AppTheme.iconSm,
-                            color: AppTheme.mutedTextColor,
-                          ),
-                          const SizedBox(width: AppTheme.spacingXs),
-                          Text(
-                            'No visits yet',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppTheme.mutedTextColor,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Consumer<LanguageProvider>(
+                      builder: (context, languageProvider, child) {
+                        final l10n = AppLocalizations.of(context)!;
+                        if (lastVisit != null) {
+                          return Row(
+                            children: [
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: AppTheme.iconSm,
+                                color: AppTheme.secondaryTextColor,
+                              ),
+                              const SizedBox(width: AppTheme.spacingXs),
+                              Text(
+                                '${l10n.lastVisit} ${lastVisit.formattedVisitDate(l10n)}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.secondaryTextColor,
+                                ),
+                              ),
+                            ],
+                          );
+                        } else {
+                          return Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline_rounded,
+                                size: AppTheme.iconSm,
+                                color: AppTheme.mutedTextColor,
+                              ),
+                              const SizedBox(width: AppTheme.spacingXs),
+                              Text(
+                                l10n.noVisitsYet,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.mutedTextColor,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),

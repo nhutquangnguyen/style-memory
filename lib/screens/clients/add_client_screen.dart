@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../l10n/app_localizations.dart';
 
 class AddClientScreen extends StatefulWidget {
   const AddClientScreen({super.key});
@@ -56,20 +57,22 @@ class _AddClientScreenState extends State<AddClientScreen> {
   }
 
   String? _validateEmail(String? value) {
+    final l10n = AppLocalizations.of(context)!;
     if (value != null && value.trim().isNotEmpty) {
       final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
       if (!emailRegex.hasMatch(value.trim())) {
-        return 'Please enter a valid email address';
+        return l10n.pleaseEnterValidEmail;
       }
     }
     return null;
   }
 
   String? _validatePhone(String? value) {
+    final l10n = AppLocalizations.of(context)!;
     if (value != null && value.trim().isNotEmpty) {
       final phoneRegex = RegExp(r'^\+?[\d\s\-\(\)]+$');
       if (!phoneRegex.hasMatch(value.trim())) {
-        return 'Please enter a valid phone number';
+        return l10n.pleaseEnterValidPhoneNumber;
       }
     }
     return null;
@@ -77,18 +80,20 @@ class _AddClientScreenState extends State<AddClientScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<ClientsProvider>(
       builder: (context, clientsProvider, child) {
         return LoadingOverlay(
           isLoading: clientsProvider.isLoading,
-          message: 'Creating client...',
+          message: l10n.creatingClient,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('New Client'),
+              title: Text(l10n.newClient),
               actions: [
                 TextButton(
                   onPressed: clientsProvider.isLoading ? null : _handleSaveClient,
-                  child: const Text('Save'),
+                  child: Text(l10n.save),
                 ),
               ],
             ),
@@ -112,15 +117,15 @@ class _AddClientScreenState extends State<AddClientScreen> {
                       // Client name field
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Client Name',
-                          hintText: 'Enter client\'s full name',
+                        decoration: InputDecoration(
+                          labelText: l10n.clientName,
+                          hintText: l10n.enterClientFullName,
                         ),
                         textInputAction: TextInputAction.next,
                         textCapitalization: TextCapitalization.words,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Client name is required';
+                            return l10n.clientNameRequired;
                           }
                           return null;
                         },
@@ -131,9 +136,9 @@ class _AddClientScreenState extends State<AddClientScreen> {
                       // Phone field
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone (optional)',
-                          hintText: 'Enter phone number',
+                        decoration: InputDecoration(
+                          labelText: l10n.phoneOptional,
+                          hintText: l10n.enterPhoneNumber,
                         ),
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.next,
@@ -145,9 +150,9 @@ class _AddClientScreenState extends State<AddClientScreen> {
                       // Email field
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email (optional)',
-                          hintText: 'Enter email address',
+                        decoration: InputDecoration(
+                          labelText: l10n.emailOptional,
+                          hintText: l10n.enterEmailAddress,
                         ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.done,
@@ -160,14 +165,14 @@ class _AddClientScreenState extends State<AddClientScreen> {
                       // Save and add photos button
                       ElevatedButton(
                         onPressed: clientsProvider.isLoading ? null : _handleSaveClient,
-                        child: const Text('Save & Add Photos'),
+                        child: Text(l10n.saveAndAddPhotos),
                       ),
 
                       const SizedBox(height: AppTheme.spacingMedium),
 
                       // Info text
                       Text(
-                        'After saving, you\'ll be able to capture photos for this client\'s first visit.',
+                        l10n.afterSavingCanCapturePhotos,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: AppTheme.secondaryTextColor,
                         ),

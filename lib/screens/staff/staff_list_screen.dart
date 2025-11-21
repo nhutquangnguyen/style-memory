@@ -7,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../l10n/app_localizations.dart';
 
 class StaffListScreen extends StatefulWidget {
   const StaffListScreen({super.key});
@@ -26,13 +27,14 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<StaffProvider>(
       builder: (context, staffProvider, child) {
         return LoadingOverlay(
           isLoading: staffProvider.isLoading,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Staff Management'),
+              title: Text(l10n.staffManagement),
               actions: [
                 PopupMenuButton<String>(
                   onSelected: (value) {
@@ -45,16 +47,19 @@ class _StaffListScreenState extends State<StaffListScreen> {
                         break;
                     }
                   },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'show_all',
-                      child: Text('Show All Staff'),
-                    ),
-                    const PopupMenuItem(
-                      value: 'analytics',
-                      child: Text('Staff Analytics'),
-                    ),
-                  ],
+                  itemBuilder: (context) {
+                    final l10n = AppLocalizations.of(context)!;
+                    return [
+                      PopupMenuItem(
+                        value: 'show_all',
+                        child: Text(l10n.showAllStaff),
+                      ),
+                      PopupMenuItem(
+                        value: 'analytics',
+                        child: Text(l10n.staffAnalytics),
+                      ),
+                    ];
+                  },
                 ),
               ],
             ),
@@ -73,7 +78,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
                 // Staff list
                 Expanded(
-                  child: _buildStaffList(staffProvider),
+                  child: _buildStaffList(staffProvider, l10n),
                 ),
               ],
             ),
@@ -87,15 +92,15 @@ class _StaffListScreenState extends State<StaffListScreen> {
     );
   }
 
-  Widget _buildStaffList(StaffProvider staffProvider) {
+  Widget _buildStaffList(StaffProvider staffProvider, AppLocalizations l10n) {
     final activeStaff = staffProvider.activeStaff;
 
     if (activeStaff.isEmpty && !staffProvider.isLoading) {
       return EmptyState(
         icon: Icons.group_outlined,
-        title: 'No staff members yet',
-        description: 'Add your first team member to get started',
-        actionText: 'Add Staff Member',
+        title: l10n.noStaffMembersYet,
+        description: l10n.addFirstTeamMember,
+        actionText: l10n.addStaffMember,
         onAction: () => _showAddStaffDialog(context),
       );
     }
@@ -133,24 +138,26 @@ class _StaffListScreenState extends State<StaffListScreen> {
   }
 
   void _showStaffDetails(BuildContext context, Staff staff) {
+    final l10n = AppLocalizations.of(context)!;
     // TODO: Navigate to staff details screen
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Staff details for ${staff.name} coming soon')),
+      SnackBar(content: Text('${l10n.staffDetailsComingSoon}'.replaceAll('{staffName}', staff.name))),
     );
   }
 
   void _showDeleteStaffDialog(BuildContext context, Staff staff) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Remove Staff Member'),
+        title: Text(l10n.removeStaffMember),
         content: Text(
-          'Are you sure you want to remove ${staff.name} from your team? They will be marked as inactive but their work history will be preserved.',
+          '${l10n.confirmRemoveStaff}'.replaceAll('{staffName}', staff.name),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () async {
@@ -162,14 +169,14 @@ class _StaffListScreenState extends State<StaffListScreen> {
               final success = await staffProvider.deleteStaff(staff.id);
               if (success && mounted) {
                 scaffoldMessenger.showSnackBar(
-                  SnackBar(content: Text('${staff.name} removed from team')),
+                  SnackBar(content: Text('${l10n.staffRemovedFromTeam}'.replaceAll('{staffName}', staff.name))),
                 );
               }
             },
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.errorColor,
             ),
-            child: const Text('Remove'),
+            child: Text(l10n.remove),
           ),
         ],
       ),
@@ -177,24 +184,25 @@ class _StaffListScreenState extends State<StaffListScreen> {
   }
 
   void _showStaffAnalytics(BuildContext context, StaffProvider staffProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final stats = staffProvider.getStaffStats();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Staff Analytics'),
+        title: Text(l10n.staffAnalytics),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatRow('Total Staff', stats['total_staff'].toString()),
-            _buildStatRow('Active Staff', stats['active_staff'].toString()),
-            _buildStatRow('Inactive Staff', stats['inactive_staff'].toString()),
+            _buildStatRow(l10n.totalStaff, stats['total_staff'].toString()),
+            _buildStatRow(l10n.activeStaff, stats['active_staff'].toString()),
+            _buildStatRow(l10n.inactiveStaff, stats['inactive_staff'].toString()),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
+            child: Text(l10n.close),
           ),
         ],
       ),
@@ -298,16 +306,19 @@ class _StaffCard extends StatelessWidget {
                       break;
                   }
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Text('Edit'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Text('Remove'),
-                  ),
-                ],
+                itemBuilder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
+                  return [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text(l10n.edit),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(l10n.remove),
+                    ),
+                  ];
+                },
               ),
             ],
           ),
@@ -358,8 +369,9 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: Text(isEditing ? 'Edit Staff Member' : 'Add Staff Member'),
+      title: Text(isEditing ? l10n.editStaffMember : l10n.addStaffMember),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -368,13 +380,13 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name',
-                  hintText: 'Enter staff member name',
+                decoration: InputDecoration(
+                  labelText: l10n.fullName,
+                  hintText: l10n.enterStaffMemberName,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Name is required';
+                    return l10n.nameRequired;
                   }
                   return null;
                 },
@@ -383,25 +395,25 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
 
               TextFormField(
                 controller: _specialtyController,
-                decoration: const InputDecoration(
-                  labelText: 'Specialty',
-                  hintText: 'e.g., Hair Color Specialist, Nail Art',
+                decoration: InputDecoration(
+                  labelText: l10n.specialty,
+                  hintText: l10n.specialtyHint,
                 ),
               ),
               const SizedBox(height: AppTheme.spacingMedium),
 
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'staff@salon.com',
+                decoration: InputDecoration(
+                  labelText: l10n.email,
+                  hintText: l10n.staffEmailHint,
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
                     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
                     if (!emailRegex.hasMatch(value)) {
-                      return 'Please enter a valid email';
+                      return l10n.pleaseEnterValidEmail;
                     }
                   }
                   return null;
@@ -411,9 +423,9 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
 
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  hintText: '(555) 123-4567',
+                decoration: InputDecoration(
+                  labelText: l10n.phone,
+                  hintText: l10n.phoneNumberHint,
                 ),
                 keyboardType: TextInputType.phone,
               ),
@@ -421,9 +433,9 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
 
               TextFormField(
                 controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  hintText: 'Additional information...',
+                decoration: InputDecoration(
+                  labelText: l10n.notes,
+                  hintText: l10n.additionalInformation,
                 ),
                 maxLines: 2,
               ),
@@ -434,11 +446,11 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         ElevatedButton(
           onPressed: _saveStaff,
-          child: Text(isEditing ? 'Update' : 'Add'),
+          child: Text(isEditing ? l10n.update : l10n.add),
         ),
       ],
     );
@@ -447,6 +459,7 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
   void _saveStaff() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final staff = isEditing
         ? widget.staff!.copyWith(
             name: _nameController.text.trim(),
@@ -478,8 +491,8 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text(isEditing
-              ? '${staff.name} updated successfully'
-              : '${staff.name} added to your team'
+              ? '${l10n.staffUpdatedSuccessfully}'.replaceAll('{staffName}', staff.name)
+              : '${l10n.staffAddedToTeam}'.replaceAll('{staffName}', staff.name)
           ),
         ),
       );

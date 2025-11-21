@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/providers.dart';
+import '../l10n/app_localizations.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
@@ -177,6 +178,7 @@ class MainBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final currentRoute = GoRouterState.of(context).fullPath;
 
     int selectedIndex = 0;
@@ -203,18 +205,18 @@ class MainBottomNavigation extends StatelessWidget {
             break;
         }
       },
-      items: const [
+      items: [
         BottomNavigationBarItem(
-          icon: Icon(Icons.people),
-          label: 'Clients',
+          icon: const Icon(Icons.people),
+          label: l10n.clients,
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite),
-          label: 'Loved Styles',
+          icon: const Icon(Icons.favorite),
+          label: l10n.lovedStyles,
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),
-          label: 'Settings',
+          icon: const Icon(Icons.settings),
+          label: l10n.settings,
         ),
       ],
     );

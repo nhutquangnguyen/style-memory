@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,14 +44,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
         return LoadingOverlay(
           isLoading: authProvider.isLoading,
-          message: 'Signing in...',
+          message: l10n.loading,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Sign In'),
+              title: Text(l10n.signIn),
             ),
             body: SafeArea(
               child: Padding(
@@ -74,18 +77,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Email field
                       TextFormField(
                         controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          hintText: 'Enter your email address',
+                        decoration: InputDecoration(
+                          labelText: l10n.email,
+                          hintText: l10n.enterYourEmail,
                         ),
                         keyboardType: TextInputType.emailAddress,
                         textInputAction: TextInputAction.next,
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Email is required';
+                            return l10n.emailRequired;
                           }
                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value.trim())) {
-                            return 'Please enter a valid email address';
+                            return l10n.pleaseEnterValidEmail;
                           }
                           return null;
                         },
@@ -97,8 +100,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
-                          labelText: 'Password',
-                          hintText: 'Enter your password',
+                          labelText: l10n.password,
+                          hintText: l10n.enterYourPassword,
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -117,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         onFieldSubmitted: (_) => _handleSignIn(),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Password is required';
+                            return l10n.passwordRequired;
                           }
                           return null;
                         },
@@ -128,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       // Sign in button
                       ElevatedButton(
                         onPressed: authProvider.isLoading ? null : _handleSignIn,
-                        child: const Text('Sign In'),
+                        child: Text(l10n.signIn),
                       ),
 
                       const SizedBox(height: AppTheme.spacingMedium),
@@ -139,12 +142,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           onPressed: () {
                             // TODO: Implement forgot password
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Forgot password feature coming soon'),
+                              SnackBar(
+                                content: Text(l10n.forgotPasswordFeature),
                               ),
                             );
                           },
-                          child: const Text('Forgot password?'),
+                          child: Text(l10n.forgotPassword),
                         ),
                       ),
 
@@ -155,14 +158,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Don\'t have an account? ',
+                            l10n.dontHaveAccount,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           TextButton(
                             onPressed: () {
                               context.goNamed('signup');
                             },
-                            child: const Text('Create one'),
+                            child: Text(l10n.createOne),
                           ),
                         ],
                       ),
