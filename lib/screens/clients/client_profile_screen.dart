@@ -34,6 +34,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   String? _selectedServiceId;
   bool _showSearchBar = false;
 
+  // Client details expansion state - using ValueNotifier to prevent full widget rebuilds
+  final ValueNotifier<bool> _isClientDetailsExpandedNotifier = ValueNotifier<bool>(false);
+
   @override
   void initState() {
     super.initState();
@@ -48,6 +51,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _isClientDetailsExpandedNotifier.dispose();
     super.dispose();
   }
 
@@ -166,11 +170,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                     ),
                   ),
 
-                // Client avatar and basic info section
-                _buildClientHeaderSection(client),
-
-                // Client contact information section
-                _buildClientInfoSection(client),
+                // Client avatar and basic info section with expandable details
+                _buildExpandableClientSection(client, visitsProvider),
 
                 // Search bar
                 if (_showSearchBar) _buildSearchBar(l10n),
@@ -198,7 +199,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
-  Widget _buildClientHeaderSection(Client client) {
+  Widget _buildExpandableClientSection(Client client, VisitsProvider visitsProvider) {
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppTheme.spacingMedium,
@@ -206,105 +207,212 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         AppTheme.spacingMedium,
         AppTheme.spacingSmall,
       ),
-      child: Row(
-        children: [
-          // Avatar
-          ClientAvatarLarge(
-            client: client,
-            onTap: () => _showEditClientDialog(context, client),
-          ),
+      child: ValueListenableBuilder<bool>(
+        valueListenable: _isClientDetailsExpandedNotifier,
+        builder: (context, isExpanded, child) {
+          return Column(
+            children: [
+              // Client header with dropdown arrow
+              _ExpandableClientHeader(
+                client: client,
+                isExpanded: isExpanded,
+                onToggle: () {
+                  _isClientDetailsExpandedNotifier.value = !_isClientDetailsExpandedNotifier.value;
+                },
+              ),
 
-          const SizedBox(width: AppTheme.spacingMedium),
-
-          // Client basic info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  client.fullName,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryTextColor,
-                  ),
-                ),
-
-                const SizedBox(height: AppTheme.spacingXs),
-
-                Text(
-                  'Client',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.secondaryTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+              // Expandable content
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: isExpanded
+                  ? _buildExpandedClientDetails(client, visitsProvider)
+                  : const SizedBox.shrink(),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildClientInfoSection(Client client) {
+  Widget _buildExpandedClientDetails(Client client, VisitsProvider visitsProvider) {
     final hasContactInfo = (client.phone?.isNotEmpty ?? false) ||
                           (client.email?.isNotEmpty ?? false) ||
                           client.birthday != null;
 
-    if (!hasContactInfo) {
-      return const SizedBox.shrink(); // Don't show section if no info
-    }
-
     return Container(
-      margin: const EdgeInsets.all(AppTheme.spacingMedium),
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
-        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
-        border: Border.all(
-          color: AppTheme.borderLightColor.withValues(alpha: 0.3),
-          width: 0.5,
+        color: AppTheme.surfaceColor.withValues(alpha: 0.5),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppTheme.borderRadiusMedium),
+          bottomRight: Radius.circular(AppTheme.borderRadiusMedium),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(
+          color: AppTheme.borderLightColor,
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Phone number
-          if (client.phone?.isNotEmpty ?? false)
-            _buildInfoRow(
-              icon: Icons.phone_outlined,
-              label: 'Phone',
-              value: client.phone!,
-              onTap: () => _callPhone(client.phone!),
+          // Client Information Section
+          if (hasContactInfo) ...[
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: AppTheme.iconMd,
+                  color: AppTheme.primaryColor,
+                ),
+                const SizedBox(width: AppTheme.spacingSmall),
+                Text(
+                  'Contact Information',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primaryColor,
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: AppTheme.spacingSmall),
 
-          // Email
-          if (client.email?.isNotEmpty ?? false)
-            _buildInfoRow(
-              icon: Icons.email_outlined,
-              label: 'Email',
-              value: client.email!,
-              onTap: () => _sendEmail(client.email!),
-            ),
+            // Contact details
+            if (client.phone?.isNotEmpty ?? false)
+              _buildInfoRow(
+                icon: Icons.phone_outlined,
+                label: 'Phone',
+                value: client.phone!,
+                onTap: () => _callPhone(client.phone!),
+              ),
 
-          // Birthday
-          if (client.birthday != null)
-            _buildInfoRow(
-              icon: Icons.cake_outlined,
-              label: 'Birthday',
-              value: client.formattedBirthday ?? '',
-              onTap: null, // No action for birthday
-            ),
+            if (client.email?.isNotEmpty ?? false)
+              _buildInfoRow(
+                icon: Icons.email_outlined,
+                label: 'Email',
+                value: client.email!,
+                onTap: () => _sendEmail(client.email!),
+              ),
+
+            if (client.birthday != null)
+              _buildInfoRow(
+                icon: Icons.cake_outlined,
+                label: 'Birthday',
+                value: client.formattedBirthday ?? '',
+                onTap: null,
+              ),
+
+            const SizedBox(height: AppTheme.spacingLarge),
+          ],
+
+          // Client Metrics Section
+          Row(
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: AppTheme.iconMd,
+                color: AppTheme.primaryColor,
+              ),
+              const SizedBox(width: AppTheme.spacingSmall),
+              Text(
+                'Client Metrics',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingMedium),
+
+          // Metrics content
+          _buildClientMetricsContent(client, visitsProvider),
         ],
       ),
     );
   }
+
+  Widget _buildClientMetricsContent(Client client, VisitsProvider visitsProvider) {
+    final visits = visitsProvider.getVisitsForClient(widget.clientId);
+
+    // Calculate metrics for this client
+    final totalVisits = visits.length;
+    final lovedVisits = visits.where((visit) => visit.loved == true).length;
+
+    // Calculate recent visits (last 30 days)
+    final now = DateTime.now();
+    final thirtyDaysAgo = now.subtract(const Duration(days: 30));
+    final recentVisits = visits.where((visit) => visit.visitDate.isAfter(thirtyDaysAgo)).length;
+
+    // Find first visit date
+    DateTime? firstVisitDate;
+    if (visits.isNotEmpty) {
+      firstVisitDate = visits.map((v) => v.visitDate).reduce((a, b) => a.isBefore(b) ? a : b);
+    }
+
+    // Calculate client lifetime (days since first visit)
+    int clientLifetimeDays = 0;
+    if (firstVisitDate != null) {
+      clientLifetimeDays = now.difference(firstVisitDate).inDays;
+    }
+
+    return Column(
+      children: [
+        // Top row: Total visits and Loved visits
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Total Visits',
+                value: totalVisits.toString(),
+                icon: Icons.event_rounded,
+                color: AppTheme.primaryColor,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingMedium),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Loved Styles',
+                value: lovedVisits.toString(),
+                icon: Icons.favorite_rounded,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacingMedium),
+
+        // Bottom row: Recent visits and Client since
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Recent Visits',
+                value: recentVisits.toString(),
+                subtitle: 'Last 30 days',
+                icon: Icons.schedule_rounded,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(width: AppTheme.spacingMedium),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Client Since',
+                value: clientLifetimeDays > 0 ? '${clientLifetimeDays}d' : 'New',
+                subtitle: firstVisitDate != null
+                  ? '${firstVisitDate.day}/${firstVisitDate.month}/${firstVisitDate.year}'
+                  : 'No visits',
+                icon: Icons.person_rounded,
+                color: Colors.orange,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildInfoRow({
     required IconData icon,
@@ -355,6 +463,76 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     // For now, just show a message
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Email: $email')),
+    );
+  }
+
+
+
+  Widget _buildMetricCard({
+    required String title,
+    required String value,
+    String? subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+        border: Border.all(
+          color: AppTheme.borderLightColor,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppTheme.spacingXs),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: AppTheme.iconSm,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingSmall),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.secondaryTextColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.spacingSmall),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: AppTheme.spacingXs),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.mutedTextColor,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -868,5 +1046,106 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
         );
       }
     }
+  }
+}
+
+// Separate widget to prevent avatar reloading when expansion state changes
+class _ExpandableClientHeader extends StatefulWidget {
+  final Client client;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  const _ExpandableClientHeader({
+    required this.client,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  @override
+  State<_ExpandableClientHeader> createState() => _ExpandableClientHeaderState();
+}
+
+class _ExpandableClientHeaderState extends State<_ExpandableClientHeader> {
+  // Cache the static content to prevent rebuilds
+  late final Widget _staticContent;
+
+  @override
+  void initState() {
+    super.initState();
+    _staticContent = Row(
+      children: [
+        // Avatar - this will be cached and won't reload
+        ClientAvatar(
+          client: widget.client,
+          size: 56,
+          showBorder: true,
+        ),
+
+        const SizedBox(width: AppTheme.spacingMedium),
+
+        // Client basic info - also cached
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.client.fullName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primaryTextColor,
+                ),
+              ),
+
+              const SizedBox(height: AppTheme.spacingXs),
+
+              const Text(
+                'Client',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: widget.onToggle,
+      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+      child: Container(
+        padding: const EdgeInsets.all(AppTheme.spacingMedium),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceColor,
+          borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+          border: Border.all(
+            color: AppTheme.borderLightColor,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Static cached content (avatar + client info)
+            Expanded(child: _staticContent),
+
+            // Only the dropdown arrow animates
+            AnimatedRotation(
+              turns: widget.isExpanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                Icons.expand_more,
+                color: AppTheme.primaryColor,
+                size: AppTheme.iconLg,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
