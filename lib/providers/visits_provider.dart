@@ -27,6 +27,16 @@ class VisitsProvider extends ChangeNotifier {
     return _visitsByClient[clientId] ?? [];
   }
 
+  Future<List<Visit>> getVisitsForStaff(String staffId) async {
+    try {
+      return await _retryOperation(() => SupabaseService.getVisitsForStaff(staffId));
+    } catch (e) {
+      _errorMessage = _getNetworkErrorMessage(e);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<void> loadVisitsForClient(String clientId) async {
     // Check if we have valid cached data for this client
     final lastLoadTime = _lastLoadTimes[clientId];

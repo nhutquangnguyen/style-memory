@@ -260,6 +260,26 @@ class SupabaseService {
     return response.map((visit) => Visit.fromJson(visit)).toList();
   }
 
+  static Future<List<Visit>> getVisitsForStaff(String staffId) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('visits')
+        .select('''
+          *,
+          photos (*),
+          services (
+            id,
+            name
+          )
+        ''')
+        .eq('staff_id', staffId)
+        .eq('user_id', currentUser!.id)
+        .order('visit_date', ascending: false);
+
+    return response.map((visit) => Visit.fromJson(visit)).toList();
+  }
+
   static Future<Visit> getVisit(String visitId) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 

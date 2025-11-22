@@ -8,7 +8,6 @@ import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
-import 'staff/staff_list_screen.dart';
 import 'services/service_list_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -66,11 +65,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _navigateToStaffManagement(BuildContext context) {
     // Navigate to staff management screen
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const StaffListScreen(),
-      ),
-    );
+    context.goNamed('staff_list');
   }
 
   void _navigateToServiceManagement(BuildContext context) {

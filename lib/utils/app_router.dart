@@ -17,6 +17,8 @@ import '../screens/visits/edit_visit_screen.dart';
 import '../screens/gallery/gallery_screen.dart';
 import '../screens/loved_styles/loved_styles_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/staff/staff_list_screen.dart';
+import '../screens/staff/staff_visit_history_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -110,6 +112,23 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+
+          // Staff management routes
+          GoRoute(
+            path: '/staff',
+            name: 'staff_list',
+            builder: (context, state) => const StaffListScreen(),
+          ),
+
+          // Staff visit history (with bottom navigation)
+          GoRoute(
+            path: '/staff/:staffId/visits',
+            name: 'staff_visit_history',
+            builder: (context, state) {
+              final staffId = state.pathParameters['staffId']!;
+              return StaffVisitHistoryScreen(staffId: staffId);
+            },
           ),
         ],
       ),

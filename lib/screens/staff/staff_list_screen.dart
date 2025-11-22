@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
@@ -138,10 +139,10 @@ class _StaffListScreenState extends State<StaffListScreen> {
   }
 
   void _showStaffDetails(BuildContext context, Staff staff) {
-    final l10n = AppLocalizations.of(context)!;
-    // TODO: Navigate to staff details screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${l10n.staffDetailsComingSoon}'.replaceAll('{staffName}', staff.name))),
+    // Navigate to staff visit history screen
+    context.goNamed(
+      'staff_visit_history',
+      pathParameters: {'staffId': staff.id},
     );
   }
 
