@@ -269,8 +269,24 @@ class _PhotoGalleryViewerState extends State<PhotoGalleryViewer> {
 
   Future<int?> _getActualFileSize(Photo photo) async {
     try {
-      // Get the actual file size from Wasabi storage
-      return await WasabiService.getObjectSize(photo.storagePath);
+      // Handle different storage path formats
+      if (photo.storagePath.startsWith('wasabi:')) {
+        // For new Wasabi integration, remove 'wasabi:' prefix
+        final objectName = photo.storagePath.substring(7);
+        return await WasabiService.getObjectSize(objectName);
+      } else if (photo.storagePath.startsWith('https://s3.') &&
+                 photo.storagePath.contains('wasabisys.com')) {
+        // For legacy Wasabi URLs, extract object name from URL
+        final uri = Uri.parse(photo.storagePath);
+        final pathSegments = uri.pathSegments;
+        if (pathSegments.length >= 2) {
+          final objectName = pathSegments.skip(1).join('/'); // Skip bucket name
+          return await WasabiService.getObjectSize(objectName);
+        }
+      }
+
+      // For other storage paths (e.g., Supabase), fall back to stored size
+      return photo.fileSize;
     } catch (e) {
       // If error getting actual size, fall back to stored size
       return photo.fileSize;
