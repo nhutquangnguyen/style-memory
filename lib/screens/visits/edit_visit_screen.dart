@@ -115,7 +115,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
         pickedFiles = await picker.pickMultiImage(
           maxWidth: isRawQuality ? null : 1920,
           maxHeight: isRawQuality ? null : 1080,
-          imageQuality: imageQuality.jpegQuality,
+          imageQuality: isRawQuality ? 100 : imageQuality.jpegQuality,
         );
 
         if (pickedFiles.length > 10) {
@@ -127,7 +127,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
           source: source,
           maxWidth: isRawQuality ? null : 1920,
           maxHeight: isRawQuality ? null : 1080,
-          imageQuality: imageQuality.jpegQuality,
+          imageQuality: isRawQuality ? 100 : imageQuality.jpegQuality,
         );
         pickedFiles = pickedFile != null ? [pickedFile] : [];
       }

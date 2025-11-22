@@ -22,41 +22,42 @@ class PhotoService {
     // Get quality setting if not provided
     final qualityToUse = quality ?? await ImageQualityService.getJpegQuality();
 
-    // Decode the image
+    // For RAW quality (95 or higher), return original bytes without any processing
+    final isRawQuality = qualityToUse >= 95;
+    if (isRawQuality) {
+      return imageBytes;
+    }
+
+    // Decode the image for processing
     img.Image? image = img.decodeImage(imageBytes);
     if (image == null) {
       throw Exception('Failed to decode image');
     }
 
-    // For RAW quality (95), skip resizing to preserve original dimensions
-    final isRawQuality = qualityToUse >= 95;
+    // Calculate new dimensions while maintaining aspect ratio
+    int newWidth = image.width;
+    int newHeight = image.height;
 
-    if (!isRawQuality) {
-      // Calculate new dimensions while maintaining aspect ratio
-      int newWidth = image.width;
-      int newHeight = image.height;
+    if (newWidth > maxWidth || newHeight > maxHeight) {
+      double aspectRatio = newWidth / newHeight;
 
-      if (newWidth > maxWidth || newHeight > maxHeight) {
-        double aspectRatio = newWidth / newHeight;
-
-        if (newWidth > newHeight) {
-          newWidth = maxWidth;
-          newHeight = (maxWidth / aspectRatio).round();
-        } else {
-          newHeight = maxHeight;
-          newWidth = (maxHeight * aspectRatio).round();
-        }
+      if (newWidth > newHeight) {
+        newWidth = maxWidth;
+        newHeight = (maxWidth / aspectRatio).round();
+      } else {
+        newHeight = maxHeight;
+        newWidth = (maxHeight * aspectRatio).round();
       }
+    }
 
-      // Resize the image if needed
-      if (newWidth != image.width || newHeight != image.height) {
-        image = img.copyResize(
-          image,
-          width: newWidth,
-          height: newHeight,
-          interpolation: img.Interpolation.linear,
-        );
-      }
+    // Resize the image if needed
+    if (newWidth != image.width || newHeight != image.height) {
+      image = img.copyResize(
+        image,
+        width: newWidth,
+        height: newHeight,
+        interpolation: img.Interpolation.linear,
+      );
     }
 
     // Encode as JPEG with the specified quality

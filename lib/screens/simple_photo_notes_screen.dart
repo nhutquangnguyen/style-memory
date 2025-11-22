@@ -347,7 +347,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
         source: ImageSource.camera,
         maxWidth: isRawQuality ? null : 1920,
         maxHeight: isRawQuality ? null : 1080,
-        imageQuality: imageQuality.jpegQuality,
+        imageQuality: isRawQuality ? 100 : imageQuality.jpegQuality,
         preferredCameraDevice: CameraDevice.rear,
       );
 
@@ -379,7 +379,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
       final List<XFile> photos = await _picker.pickMultiImage(
         maxWidth: isRawQuality ? null : 1920,
         maxHeight: isRawQuality ? null : 1080,
-        imageQuality: imageQuality.jpegQuality,
+        imageQuality: isRawQuality ? 100 : imageQuality.jpegQuality,
         limit: 10, // Limit to prevent memory issues
       );
 

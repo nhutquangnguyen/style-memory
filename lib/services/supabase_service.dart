@@ -1,8 +1,7 @@
-import 'dart:io';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
+import 'wasabi_service.dart';
 
 class SupabaseService {
   static late SupabaseClient _client;
@@ -332,9 +331,28 @@ class SupabaseService {
         .eq('visit_id', visitId);
 
     for (final photo in photos) {
-      await _client.storage
-          .from('client-photos')
-          .remove([photo['storage_path']]);
+      final storagePath = photo['storage_path'] as String;
+
+      // Handle Wasabi storage paths
+      if (storagePath.startsWith('wasabi:')) {
+        final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
+        try {
+          await WasabiService.deletePhoto('https://s3.ap-southeast-1.wasabisys.com/style-memory-photos/$objectName');
+        } catch (e) {
+          // Log error but continue with deletion
+          debugPrint('Failed to delete Wasabi photo $objectName: $e');
+        }
+      } else {
+        // Handle legacy Supabase storage paths
+        try {
+          await _client.storage
+              .from('client-photos')
+              .remove([storagePath]);
+        } catch (e) {
+          // Log error but continue with deletion
+          debugPrint('Failed to delete Supabase photo $storagePath: $e');
+        }
+      }
     }
 
     // Delete visit (cascade will handle photos table)
