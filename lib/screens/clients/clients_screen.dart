@@ -13,14 +13,14 @@ import '../../widgets/common/modern_input.dart';
 import '../../widgets/client/client_avatar.dart';
 import '../../l10n/app_localizations.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class ClientsScreen extends StatefulWidget {
+  const ClientsScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ClientsScreen> createState() => _ClientsScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _ClientsScreenState extends State<ClientsScreen> {
   final _searchController = TextEditingController();
   bool _showSearchBar = false;
 

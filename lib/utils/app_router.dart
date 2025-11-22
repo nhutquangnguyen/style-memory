@@ -7,7 +7,8 @@ import '../l10n/app_localizations.dart';
 import '../screens/auth/welcome_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
-import '../screens/clients/home_screen.dart';
+import '../screens/home_screen.dart';
+import '../screens/clients/clients_screen.dart';
 import '../screens/clients/add_client_screen.dart';
 import '../screens/clients/edit_client_screen.dart';
 import '../screens/clients/client_profile_screen.dart';
@@ -19,6 +20,7 @@ import '../screens/loved_styles/loved_styles_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/staff/staff_list_screen.dart';
 import '../screens/staff/staff_visit_history_screen.dart';
+import '../screens/services/service_list_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -36,7 +38,7 @@ class AppRouter {
 
       // If user is authenticated and trying to access auth routes
       if (isAuthenticated && isAuthRoute) {
-        return '/clients';
+        return '/home';
       }
 
       return null; // No redirect needed
@@ -65,11 +67,18 @@ class AppRouter {
           return MainNavigationShell(child: child);
         },
         routes: [
+          // Home route - main landing page
+          GoRoute(
+            path: '/home',
+            name: 'home',
+            builder: (context, state) => const HomeScreen(),
+          ),
+
           // Clients route
           GoRoute(
             path: '/clients',
             name: 'clients',
-            builder: (context, state) => const HomeScreen(),
+            builder: (context, state) => const ClientsScreen(),
             routes: [
               GoRoute(
                 path: 'add',
@@ -107,13 +116,6 @@ class AppRouter {
             builder: (context, state) => const LovedStylesScreen(),
           ),
 
-          // Settings route
-          GoRoute(
-            path: '/settings',
-            name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
-
           // Staff management routes
           GoRoute(
             path: '/staff',
@@ -129,6 +131,20 @@ class AppRouter {
               final staffId = state.pathParameters['staffId']!;
               return StaffVisitHistoryScreen(staffId: staffId);
             },
+          ),
+
+          // Services route (with bottom navigation)
+          GoRoute(
+            path: '/services',
+            name: 'services',
+            builder: (context, state) => const ServiceListScreen(),
+          ),
+
+          // Settings route (with bottom navigation)
+          GoRoute(
+            path: '/settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
@@ -234,12 +250,12 @@ class MainBottomNavigation extends StatelessWidget {
     final currentRoute = GoRouterState.of(context).fullPath;
 
     int selectedIndex = 0;
-    if (currentRoute?.startsWith('/clients') == true) {
-      selectedIndex = 0; // Clients tab
+    if (currentRoute?.startsWith('/home') == true) {
+      selectedIndex = 0; // Home tab
+    } else if (currentRoute?.startsWith('/clients') == true) {
+      selectedIndex = 1; // Clients tab
     } else if (currentRoute == '/loved-styles') {
-      selectedIndex = 1; // Loved Styles tab
-    } else if (currentRoute?.startsWith('/settings') == true) {
-      selectedIndex = 2;
+      selectedIndex = 2; // Loved Styles tab
     }
 
     return BottomNavigationBar(
@@ -247,17 +263,21 @@ class MainBottomNavigation extends StatelessWidget {
       onTap: (index) {
         switch (index) {
           case 0:
-            context.goNamed('clients');
+            context.goNamed('home');
             break;
           case 1:
-            context.go('/loved-styles');
+            context.goNamed('clients');
             break;
           case 2:
-            context.goNamed('settings');
+            context.goNamed('loved_styles');
             break;
         }
       },
       items: [
+        BottomNavigationBarItem(
+          icon: const Icon(Icons.home),
+          label: 'Home',
+        ),
         BottomNavigationBarItem(
           icon: const Icon(Icons.people),
           label: l10n.clients,
@@ -265,10 +285,6 @@ class MainBottomNavigation extends StatelessWidget {
         BottomNavigationBarItem(
           icon: const Icon(Icons.favorite),
           label: l10n.lovedStyles,
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.settings),
-          label: l10n.settings,
         ),
       ],
     );

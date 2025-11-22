@@ -8,7 +8,6 @@ import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../models/models.dart';
-import 'services/service_list_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -63,19 +62,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  void _navigateToStaffManagement(BuildContext context) {
-    // Navigate to staff management screen
-    context.goNamed('staff_list');
-  }
-
-  void _navigateToServiceManagement(BuildContext context) {
-    // Navigate to service management screen
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const ServiceListScreen(),
-      ),
-    );
-  }
 
 
   @override
@@ -183,31 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, l10n.language),
               Consumer<LanguageProvider>(
                 builder: (context, languageProvider, child) {
-                  return _buildAccountTile(
-                    context,
-                    icon: Icons.language,
-                    title: l10n.language,
-                    subtitle: languageProvider.currentLanguageName,
-                    onTap: () => _showLanguageDialog(context),
-                  );
+                  return _buildLanguageSection(context, l10n, languageProvider);
                 },
-              ),
-
-              // Management section
-              _buildSectionHeader(context, l10n.management),
-              _buildAccountTile(
-                context,
-                icon: Icons.group_work,
-                title: l10n.staffManagement,
-                subtitle: l10n.manageTeamMembers,
-                onTap: () => _navigateToStaffManagement(context),
-              ),
-              _buildAccountTile(
-                context,
-                icon: Icons.design_services,
-                title: l10n.serviceManagement,
-                subtitle: l10n.manageServicesAndPricing,
-                onTap: () => _navigateToServiceManagement(context),
               ),
 
               // Subscription section (placeholder)
@@ -542,75 +505,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showLanguageDialog(BuildContext context) {
-    final languageProvider = context.read<LanguageProvider>();
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.selectLanguage),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: LanguageProvider.supportedLocales.map((locale) {
-            return ListTile(
-              leading: Radio<Locale>(
-                value: locale,
-                groupValue: languageProvider.currentLocale,
-                onChanged: (Locale? value) async {
-                  if (value != null && value != languageProvider.currentLocale) {
-                    try {
-                      await languageProvider.changeLanguage(value);
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Language updated successfully')),
-                        );
-                      }
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to update language: $e')),
-                        );
-                      }
-                    }
-                  }
-                },
-              ),
-              title: Text(languageProvider.getLanguageName(locale)),
-              onTap: () async {
-                if (locale != languageProvider.currentLocale) {
-                  try {
-                    await languageProvider.changeLanguage(locale);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppLocalizations.of(context)!.languageUpdated)),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to update language: $e')),
-                      );
-                    }
-                  }
-                }
-              },
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.cancel),
-          ),
-        ],
-      ),
-    );
-  }
-
-
   // Load watermark setting from SharedPreferences
   Future<void> _loadWatermarkSetting() async {
     final prefs = await SharedPreferences.getInstance();
@@ -753,33 +647,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: AppTheme.spacingMedium),
 
-                // Quality options
-                ...ImageQuality.values.map((quality) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
-                  child: RadioListTile<ImageQuality>(
-                    value: quality,
-                    groupValue: _selectedImageQuality,
-                    onChanged: (ImageQuality? value) {
-                      if (value != null) {
-                        _saveImageQualitySetting(value);
-                      }
-                    },
-                    title: Text(
-                      _getQualityDisplayName(quality, l10n),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                // Quality dropdown
+                DropdownButtonFormField<ImageQuality>(
+                  initialValue: _selectedImageQuality,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
                     ),
-                    subtitle: Text(
-                      _getQualityDescription(quality, l10n),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingMedium,
+                      vertical: AppTheme.spacingSmall,
                     ),
-                    contentPadding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
                   ),
-                )),
+                  items: ImageQuality.values.map((quality) {
+                    return DropdownMenuItem<ImageQuality>(
+                      value: quality,
+                      child: Text(
+                        _getQualityDisplayName(quality, l10n),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (ImageQuality? value) {
+                    if (value != null) {
+                      _saveImageQualitySetting(value);
+                    }
+                  },
+                ),
+                const SizedBox(height: AppTheme.spacingSmall),
+                Text(
+                  _getQualityDescription(_selectedImageQuality, l10n),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ],
             ),
           ),
@@ -810,6 +714,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case ImageQuality.compressed:
         return l10n.imageQualityCompressedDescription;
     }
+  }
+
+  // Build language section widget
+  Widget _buildLanguageSection(BuildContext context, AppLocalizations l10n, LanguageProvider languageProvider) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingSmall),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.language,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingSmall),
+                Text(
+                  l10n.language,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Language options
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacingMedium),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select your preferred language for the application',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMedium),
+
+                // Language dropdown
+                DropdownButtonFormField<Locale>(
+                  initialValue: languageProvider.currentLocale,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.borderRadiusMedium),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppTheme.spacingMedium,
+                      vertical: AppTheme.spacingSmall,
+                    ),
+                  ),
+                  items: LanguageProvider.supportedLocales.map((locale) {
+                    return DropdownMenuItem<Locale>(
+                      value: locale,
+                      child: Text(
+                        languageProvider.getLanguageName(locale),
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (Locale? value) async {
+                    if (value != null && value != languageProvider.currentLocale) {
+                      try {
+                        await languageProvider.changeLanguage(value);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.languageUpdated)),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to update language: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
 }
