@@ -237,6 +237,19 @@ class WasabiService {
   }
 
   // Simplified storage stats without list operations
+  /// Get file size of an object in bytes
+  static Future<int?> getObjectSize(String objectPath) async {
+    try {
+      if (!_isInitialized) await initialize();
+
+      final objectStat = await _minio.statObject(_bucketName, objectPath);
+      return objectStat.size;
+    } catch (e) {
+      debugPrint('Error getting object size: $e');
+      return null;
+    }
+  }
+
   static Future<Map<String, dynamic>> getBucketStats() async {
     try {
       if (!_isInitialized) await initialize();

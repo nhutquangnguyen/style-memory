@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/photo.dart';
 import '../providers/visits_provider.dart';
+import '../services/wasabi_service.dart';
 import '../widgets/common/cached_image.dart';
 
 class PhotoGalleryViewer extends StatefulWidget {
@@ -229,10 +230,31 @@ class _PhotoGalleryViewerState extends State<PhotoGalleryViewer> {
             Text('Type: ${photo.photoType.displayName}'),
             const SizedBox(height: 8),
             Text('Captured: ${photo.createdAt.toLocal().toString().split('.')[0]}'),
-            if (photo.fileSize != null) ...[
-              const SizedBox(height: 8),
-              Text('Size: ${(photo.fileSize! / 1024 / 1024).toStringAsFixed(2)} MB'),
-            ],
+            const SizedBox(height: 8),
+            FutureBuilder<int?>(
+              future: _getActualFileSize(photo),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Row(
+                    children: [
+                      Text('Size: '),
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      ),
+                    ],
+                  );
+                }
+
+                final fileSize = snapshot.data;
+                if (fileSize != null) {
+                  return Text('Size: ${(fileSize / 1024 / 1024).toStringAsFixed(2)} MB');
+                } else {
+                  return const Text('Size: Unknown');
+                }
+              },
+            ),
           ],
         ),
         actions: [
@@ -243,5 +265,15 @@ class _PhotoGalleryViewerState extends State<PhotoGalleryViewer> {
         ],
       ),
     );
+  }
+
+  Future<int?> _getActualFileSize(Photo photo) async {
+    try {
+      // Get the actual file size from Wasabi storage
+      return await WasabiService.getObjectSize(photo.storagePath);
+    } catch (e) {
+      // If error getting actual size, fall back to stored size
+      return photo.fileSize;
+    }
   }
 }
