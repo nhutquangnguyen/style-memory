@@ -31,6 +31,9 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   Set<String> _selectedPhotoIds = {};
   bool _isSelectionMode = false;
 
+  // Cache photo URLs to prevent reloading during selection changes
+  final Map<String, Future<String?>> _photoUrlCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +55,8 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
       setState(() {
         _visit = visit;
         _isLoading = false;
+        // Clear photo cache when loading new visit data
+        _photoUrlCache.clear();
       });
     }
   }
@@ -288,8 +293,11 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
   }
 
   Widget _buildPhotoImage(Photo photo) {
+    // Cache the future to prevent reloading on selection changes
+    _photoUrlCache[photo.id] ??= context.read<VisitsProvider>().getPhotoUrl(photo.storagePath);
+
     return FutureBuilder<String?>(
-      future: context.read<VisitsProvider>().getPhotoUrl(photo.storagePath),
+      future: _photoUrlCache[photo.id],
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
@@ -774,5 +782,12 @@ class _VisitDetailsScreenState extends State<VisitDetailsScreen> {
         );
       }
     }
+  }
+
+  @override
+  void dispose() {
+    // Clear photo URL cache to free memory
+    _photoUrlCache.clear();
+    super.dispose();
   }
 }
