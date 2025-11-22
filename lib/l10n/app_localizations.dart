@@ -572,6 +572,54 @@ abstract class AppLocalizations {
   /// **'Show salon name, phone, and address on shared photos instead of app name'**
   String get useSalonWatermarkDescription;
 
+  /// No description provided for @imageQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Quality'**
+  String get imageQuality;
+
+  /// No description provided for @imageQualityDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how photos are saved and uploaded'**
+  String get imageQualityDescription;
+
+  /// No description provided for @imageQualityRaw.
+  ///
+  /// In en, this message translates to:
+  /// **'Raw'**
+  String get imageQualityRaw;
+
+  /// No description provided for @imageQualityRawDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Original quality (largest file size)'**
+  String get imageQualityRawDescription;
+
+  /// No description provided for @imageQualityHd.
+  ///
+  /// In en, this message translates to:
+  /// **'HD'**
+  String get imageQualityHd;
+
+  /// No description provided for @imageQualityHdDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'High quality (balanced)'**
+  String get imageQualityHdDescription;
+
+  /// No description provided for @imageQualityCompressed.
+  ///
+  /// In en, this message translates to:
+  /// **'Compressed'**
+  String get imageQualityCompressed;
+
+  /// No description provided for @imageQualityCompressedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Smaller file size (fastest upload)'**
+  String get imageQualityCompressedDescription;
+
   /// No description provided for @lovedStyles.
   ///
   /// In en, this message translates to:

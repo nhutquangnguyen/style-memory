@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:image/image.dart' as img;
+import 'image_quality_service.dart';
 
 class PhotoService {
   // Maximum dimensions for photos to optimize storage
@@ -11,47 +12,55 @@ class PhotoService {
   static const int quality = 85;
 
   /// Compresses and resizes an image file
-  static Future<Uint8List> compressImage(File imageFile) async {
+  static Future<Uint8List> compressImage(File imageFile, {int? quality}) async {
     final imageBytes = await imageFile.readAsBytes();
-    return compressImageBytes(imageBytes);
+    return compressImageBytes(imageBytes, quality: quality);
   }
 
   /// Compresses and resizes image bytes
-  static Future<Uint8List> compressImageBytes(Uint8List imageBytes) async {
+  static Future<Uint8List> compressImageBytes(Uint8List imageBytes, {int? quality}) async {
+    // Get quality setting if not provided
+    final qualityToUse = quality ?? await ImageQualityService.getJpegQuality();
+
     // Decode the image
     img.Image? image = img.decodeImage(imageBytes);
     if (image == null) {
       throw Exception('Failed to decode image');
     }
 
-    // Calculate new dimensions while maintaining aspect ratio
-    int newWidth = image.width;
-    int newHeight = image.height;
+    // For RAW quality (95), skip resizing to preserve original dimensions
+    final isRawQuality = qualityToUse >= 95;
 
-    if (newWidth > maxWidth || newHeight > maxHeight) {
-      double aspectRatio = newWidth / newHeight;
+    if (!isRawQuality) {
+      // Calculate new dimensions while maintaining aspect ratio
+      int newWidth = image.width;
+      int newHeight = image.height;
 
-      if (newWidth > newHeight) {
-        newWidth = maxWidth;
-        newHeight = (maxWidth / aspectRatio).round();
-      } else {
-        newHeight = maxHeight;
-        newWidth = (maxHeight * aspectRatio).round();
+      if (newWidth > maxWidth || newHeight > maxHeight) {
+        double aspectRatio = newWidth / newHeight;
+
+        if (newWidth > newHeight) {
+          newWidth = maxWidth;
+          newHeight = (maxWidth / aspectRatio).round();
+        } else {
+          newHeight = maxHeight;
+          newWidth = (maxHeight * aspectRatio).round();
+        }
+      }
+
+      // Resize the image if needed
+      if (newWidth != image.width || newHeight != image.height) {
+        image = img.copyResize(
+          image,
+          width: newWidth,
+          height: newHeight,
+          interpolation: img.Interpolation.linear,
+        );
       }
     }
 
-    // Resize the image if needed
-    if (newWidth != image.width || newHeight != image.height) {
-      image = img.copyResize(
-        image,
-        width: newWidth,
-        height: newHeight,
-        interpolation: img.Interpolation.linear,
-      );
-    }
-
-    // Encode as JPEG with compression
-    final compressedBytes = img.encodeJpg(image, quality: quality);
+    // Encode as JPEG with the specified quality
+    final compressedBytes = img.encodeJpg(image, quality: qualityToUse);
 
     return Uint8List.fromList(compressedBytes);
   }

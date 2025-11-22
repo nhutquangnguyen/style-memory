@@ -93,6 +93,15 @@
   "useSalonWatermark": "Use Salon Info for Watermark",
   "useSalonWatermarkDescription": "Show salon name, phone, and address on shared photos instead of app name",
 
+  "imageQuality": "Image Quality",
+  "imageQualityDescription": "Choose how photos are saved and uploaded",
+  "imageQualityRaw": "Raw",
+  "imageQualityRawDescription": "Original quality (largest file size)",
+  "imageQualityHd": "HD",
+  "imageQualityHdDescription": "High quality (balanced)",
+  "imageQualityCompressed": "Compressed",
+  "imageQualityCompressedDescription": "Smaller file size (fastest upload)",
+
   "lovedStyles": "Loved Styles",
   "gallery": "Gallery",
   "capture": "Capture",

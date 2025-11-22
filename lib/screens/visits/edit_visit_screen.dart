@@ -9,6 +9,7 @@ import '../../providers/providers.dart';
 import '../../services/photo_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/wasabi_service.dart';
+import '../../services/image_quality_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/modern_input.dart';
@@ -106,13 +107,15 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
   Future<void> _pickImage(ImageSource source) async {
     try {
       final picker = ImagePicker();
+      final imageQuality = await ImageQualityService.getImageQuality();
+      final isRawQuality = imageQuality.jpegQuality >= 95;
       final List<XFile> pickedFiles;
 
       if (source == ImageSource.gallery) {
         pickedFiles = await picker.pickMultiImage(
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
+          maxWidth: isRawQuality ? null : 1920,
+          maxHeight: isRawQuality ? null : 1080,
+          imageQuality: imageQuality.jpegQuality,
         );
 
         if (pickedFiles.length > 10) {
@@ -122,9 +125,9 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
       } else {
         final pickedFile = await picker.pickImage(
           source: source,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
+          maxWidth: isRawQuality ? null : 1920,
+          maxHeight: isRawQuality ? null : 1080,
+          imageQuality: imageQuality.jpegQuality,
         );
         pickedFiles = pickedFile != null ? [pickedFile] : [];
       }

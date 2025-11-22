@@ -248,6 +248,33 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show salon name, phone, and address on shared photos instead of app name';
 
   @override
+  String get imageQuality => 'Image Quality';
+
+  @override
+  String get imageQualityDescription =>
+      'Choose how photos are saved and uploaded';
+
+  @override
+  String get imageQualityRaw => 'Raw';
+
+  @override
+  String get imageQualityRawDescription =>
+      'Original quality (largest file size)';
+
+  @override
+  String get imageQualityHd => 'HD';
+
+  @override
+  String get imageQualityHdDescription => 'High quality (balanced)';
+
+  @override
+  String get imageQualityCompressed => 'Compressed';
+
+  @override
+  String get imageQualityCompressedDescription =>
+      'Smaller file size (fastest upload)';
+
+  @override
   String get lovedStyles => 'Loved Styles';
 
   @override

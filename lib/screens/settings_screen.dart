@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,7 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
-import '../services/photo_service_test.dart';
+import '../models/models.dart';
 import 'staff/staff_list_screen.dart';
 import 'services/service_list_screen.dart';
 
@@ -22,12 +21,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   PackageInfo? _packageInfo;
   bool _useSalonWatermark = false;
+  ImageQuality _selectedImageQuality = ImageQuality.hd;
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
     _loadWatermarkSetting();
+    _loadImageQualitySetting();
     // Initialize stores provider after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeStoresProvider();
@@ -174,6 +175,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // Watermark Settings
                       const SizedBox(height: AppTheme.spacingSmall),
                       _buildWatermarkToggle(context, l10n),
+
+                      // Image Quality Settings
+                      const SizedBox(height: AppTheme.spacingMedium),
+                      _buildImageQualitySection(context, l10n),
                     ],
                   );
                 },
@@ -240,24 +245,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
 
               const SizedBox(height: AppTheme.spacingLarge),
-
-              // Debug section (only show in debug mode)
-              if (kDebugMode) ...[
-                _buildSectionHeader(context, 'Debug'),
-                _buildActionTile(
-                  context,
-                  icon: Icons.cloud_upload,
-                  title: 'Test Wasabi Upload',
-                  onTap: () => _testWasabiUpload(context),
-                ),
-                _buildActionTile(
-                  context,
-                  icon: Icons.analytics,
-                  title: 'Wasabi Stats',
-                  onTap: () => _showWasabiStats(context),
-                ),
-                const SizedBox(height: AppTheme.spacingMedium),
-              ],
 
               // Logout button
               Padding(
@@ -628,212 +615,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Debug methods for Wasabi testing
-  Future<void> _testWasabiUpload(BuildContext context) async {
-    try {
-      // Use scaffold messenger instead of dialogs to avoid navigation issues
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Text('Testing Wasabi upload...'),
-              ],
-            ),
-            duration: Duration(seconds: 10),
-          ),
-        );
-      }
-
-      final result = await PhotoServiceTest.testWasabiUploadWithImage();
-
-      if (context.mounted) {
-        // Clear any existing snackbars
-        ScaffoldMessenger.of(context).clearSnackBars();
-
-        // Show result dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(result['success'] ? '✅ Success!' : '❌ Error'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(result['message'] ?? 'Test completed'),
-                  if (result['success']) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('📊 Upload Stats:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('⏱️ Time: ${result['upload_duration_ms']}ms'),
-                          Text('📦 Size: ${(result['file_size_bytes'] / 1024).toStringAsFixed(1)} KB'),
-                        ],
-                      ),
-                    ),
-                    if (result['image_url'] != null) ...[
-                      const SizedBox(height: 8),
-                      const Text('📎 URL:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      SelectableText(
-                        result['image_url'],
-                        style: TextStyle(fontSize: 12, color: Colors.blue),
-                      ),
-                    ],
-                  ],
-                  if (!result['success'] && result['error'] != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: SelectableText('Error: ${result['error']}'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Test failed: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showWasabiStats(BuildContext context) async {
-    try {
-      // Show loading snackbar instead of dialog
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 12),
-                Text('Getting Wasabi stats...'),
-              ],
-            ),
-            duration: Duration(seconds: 5),
-          ),
-        );
-      }
-
-      final result = await PhotoServiceTest.testWasabiUpload();
-
-      if (context.mounted) {
-        // Clear any existing snackbars
-        ScaffoldMessenger.of(context).clearSnackBars();
-
-        // Show result dialog
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text(result['success'] ? '🟢 Wasabi Connected' : '🔴 Connection Failed'),
-            content: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Status: ${result['success'] ? 'Connected' : 'Failed'}'),
-                  if (result['bucket_stats'] != null) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('📊 Bucket Info:', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          Text('🪣 Name: ${result['bucket_stats']['bucket_name']}'),
-                          Text('🌏 Region: ${result['bucket_stats']['region']}'),
-                          Text('🔗 Endpoint: ${result['bucket_stats']['endpoint']}'),
-                          Text('✅ Status: ${result['bucket_stats']['status']}'),
-                        ],
-                      ),
-                    ),
-                  ],
-                  if (!result['success'] && result['error'] != null) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: SelectableText('Error: ${result['error']}'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to get stats: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-    }
-  }
 
   // Load watermark setting from SharedPreferences
   Future<void> _loadWatermarkSetting() async {
@@ -852,6 +633,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       setState(() {
         _useSalonWatermark = value;
+      });
+    }
+  }
+
+  // Load image quality setting from SharedPreferences
+  Future<void> _loadImageQualitySetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final qualityString = prefs.getString('image_quality') ?? 'hd';
+    if (mounted) {
+      setState(() {
+        _selectedImageQuality = ImageQuality.fromString(qualityString);
+      });
+    }
+  }
+
+  // Save image quality setting to SharedPreferences
+  Future<void> _saveImageQualitySetting(ImageQuality quality) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('image_quality', quality.value);
+    if (mounted) {
+      setState(() {
+        _selectedImageQuality = quality;
       });
     }
   }
@@ -897,6 +700,121 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  // Build image quality section widget
+  Widget _buildImageQualitySection(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section header
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingSmall),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.photo_camera,
+                    color: Theme.of(context).colorScheme.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppTheme.spacingSmall),
+                Text(
+                  l10n.imageQuality,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Image quality options
+          Container(
+            padding: const EdgeInsets.all(AppTheme.spacingMedium),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.imageQualityDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingMedium),
+
+                // Quality options
+                ...ImageQuality.values.map((quality) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppTheme.spacingSmall),
+                  child: RadioListTile<ImageQuality>(
+                    value: quality,
+                    groupValue: _selectedImageQuality,
+                    onChanged: (ImageQuality? value) {
+                      if (value != null) {
+                        _saveImageQualitySetting(value);
+                      }
+                    },
+                    title: Text(
+                      _getQualityDisplayName(quality, l10n),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _getQualityDescription(quality, l10n),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to get localized display name for image quality
+  String _getQualityDisplayName(ImageQuality quality, AppLocalizations l10n) {
+    switch (quality) {
+      case ImageQuality.raw:
+        return l10n.imageQualityRaw;
+      case ImageQuality.hd:
+        return l10n.imageQualityHd;
+      case ImageQuality.compressed:
+        return l10n.imageQualityCompressed;
+    }
+  }
+
+  // Helper method to get localized description for image quality
+  String _getQualityDescription(ImageQuality quality, AppLocalizations l10n) {
+    switch (quality) {
+      case ImageQuality.raw:
+        return l10n.imageQualityRawDescription;
+      case ImageQuality.hd:
+        return l10n.imageQualityHdDescription;
+      case ImageQuality.compressed:
+        return l10n.imageQualityCompressedDescription;
+    }
   }
 
 }

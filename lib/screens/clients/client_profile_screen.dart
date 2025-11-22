@@ -165,6 +165,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                     ),
                   ),
 
+                // Client information section
+                _buildClientInfoSection(client),
+
                 // Search bar
                 if (_showSearchBar) _buildSearchBar(l10n),
 
@@ -191,6 +194,118 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
     );
   }
 
+  Widget _buildClientInfoSection(Client client) {
+    final hasContactInfo = (client.phone?.isNotEmpty ?? false) ||
+                          (client.email?.isNotEmpty ?? false) ||
+                          client.birthday != null;
+
+    if (!hasContactInfo) {
+      return const SizedBox.shrink(); // Don't show section if no info
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(AppTheme.spacingMedium),
+      padding: const EdgeInsets.all(AppTheme.spacingMedium),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceColor,
+        borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
+        border: Border.all(
+          color: AppTheme.borderLightColor.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Phone number
+          if (client.phone?.isNotEmpty ?? false)
+            _buildInfoRow(
+              icon: Icons.phone_outlined,
+              label: 'Phone',
+              value: client.phone!,
+              onTap: () => _callPhone(client.phone!),
+            ),
+
+          // Email
+          if (client.email?.isNotEmpty ?? false)
+            _buildInfoRow(
+              icon: Icons.email_outlined,
+              label: 'Email',
+              value: client.email!,
+              onTap: () => _sendEmail(client.email!),
+            ),
+
+          // Birthday
+          if (client.birthday != null)
+            _buildInfoRow(
+              icon: Icons.cake_outlined,
+              label: 'Birthday',
+              value: client.formattedBirthday ?? '',
+              onTap: null, // No action for birthday
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: AppTheme.spacingXs,
+          horizontal: AppTheme.spacingXs,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: AppTheme.primaryColor,
+            ),
+            const SizedBox(width: AppTheme.spacingSmall),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.primaryTextColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _callPhone(String phoneNumber) {
+    // TODO: Implement phone call functionality
+    // For now, just show a message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Call: $phoneNumber')),
+    );
+  }
+
+  void _sendEmail(String email) {
+    // TODO: Implement email functionality
+    // For now, just show a message
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Email: $email')),
+    );
+  }
 
   Widget _buildVisitsList(VisitsProvider visitsProvider, Client client, AppLocalizations l10n) {
     final allVisits = visitsProvider.getVisitsForClient(widget.clientId);

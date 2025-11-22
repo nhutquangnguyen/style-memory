@@ -90,6 +90,15 @@
   "useSalonWatermark": "Dùng Thông Tin Salon Cho Watermark",
   "useSalonWatermarkDescription": "Hiển thị tên salon, số điện thoại và địa chỉ trên ảnh chia sẻ thay vì tên ứng dụng",
 
+  "imageQuality": "Chất Lượng Ảnh",
+  "imageQualityDescription": "Chọn cách ảnh được lưu và tải lên",
+  "imageQualityRaw": "Gốc",
+  "imageQualityRawDescription": "Chất lượng gốc (kích thước file lớn nhất)",
+  "imageQualityHd": "HD",
+  "imageQualityHdDescription": "Chất lượng cao (cân bằng)",
+  "imageQualityCompressed": "Nén",
+  "imageQualityCompressedDescription": "Kích thước file nhỏ (tải lên nhanh nhất)",
+
   "lovedStyles": "Phong Cách Yêu Thích",
   "gallery": "Thư Viện",
   "capture": "Chụp Ảnh",

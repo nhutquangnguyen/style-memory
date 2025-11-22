@@ -131,6 +131,7 @@ class ClientsProvider extends ChangeNotifier {
     required String fullName,
     String? phone,
     String? email,
+    DateTime? birthday,
   }) async {
     if (!SupabaseService.isAuthenticated) {
       _errorMessage = 'User not authenticated';
@@ -149,6 +150,7 @@ class ClientsProvider extends ChangeNotifier {
         fullName: fullName.trim(),
         phone: phone?.trim(),
         email: email?.trim(),
+        birthday: birthday,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );

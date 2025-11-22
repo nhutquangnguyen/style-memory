@@ -248,6 +248,32 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hiển thị tên salon, số điện thoại và địa chỉ trên ảnh chia sẻ thay vì tên ứng dụng';
 
   @override
+  String get imageQuality => 'Chất Lượng Ảnh';
+
+  @override
+  String get imageQualityDescription => 'Chọn cách ảnh được lưu và tải lên';
+
+  @override
+  String get imageQualityRaw => 'Gốc';
+
+  @override
+  String get imageQualityRawDescription =>
+      'Chất lượng gốc (kích thước file lớn nhất)';
+
+  @override
+  String get imageQualityHd => 'HD';
+
+  @override
+  String get imageQualityHdDescription => 'Chất lượng cao (cân bằng)';
+
+  @override
+  String get imageQualityCompressed => 'Nén';
+
+  @override
+  String get imageQualityCompressedDescription =>
+      'Kích thước file nhỏ (tải lên nhanh nhất)';
+
+  @override
   String get lovedStyles => 'Phong Cách Yêu Thích';
 
   @override

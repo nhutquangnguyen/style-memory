@@ -20,13 +20,50 @@ class _AddClientScreenState extends State<AddClientScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _birthdayController = TextEditingController();
+
+  DateTime? _selectedBirthday;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _birthdayController.dispose();
     super.dispose();
+  }
+
+  void _updateBirthdayDisplay() {
+    if (_selectedBirthday != null) {
+      _birthdayController.text = '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}';
+    } else {
+      _birthdayController.clear();
+    }
+  }
+
+  Future<void> _selectBirthday() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedBirthday ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Select Birthday',
+      fieldLabelText: 'Date',
+    );
+
+    if (picked != null && picked != _selectedBirthday) {
+      setState(() {
+        _selectedBirthday = picked;
+        _updateBirthdayDisplay();
+      });
+    }
+  }
+
+  void _clearBirthday() {
+    setState(() {
+      _selectedBirthday = null;
+      _updateBirthdayDisplay();
+    });
   }
 
   Future<void> _handleSaveClient() async {
@@ -41,6 +78,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
       email: _emailController.text.trim().isEmpty
           ? null
           : _emailController.text.trim(),
+      birthday: _selectedBirthday,
     );
 
     if (success && mounted) {
@@ -155,9 +193,28 @@ class _AddClientScreenState extends State<AddClientScreen> {
                           hintText: l10n.enterEmailAddress,
                         ),
                         keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _handleSaveClient(),
+                        textInputAction: TextInputAction.next,
                         validator: _validateEmail,
+                      ),
+
+                      const SizedBox(height: AppTheme.spacingMedium),
+
+                      // Birthday field
+                      TextFormField(
+                        controller: _birthdayController,
+                        decoration: InputDecoration(
+                          labelText: 'Birthday (optional)',
+                          hintText: 'Tap to select date',
+                          suffixIcon: _selectedBirthday != null
+                              ? IconButton(
+                                  onPressed: _clearBirthday,
+                                  icon: const Icon(Icons.clear),
+                                  tooltip: 'Clear birthday',
+                                )
+                              : const Icon(Icons.cake_outlined),
+                        ),
+                        readOnly: true,
+                        onTap: _selectBirthday,
                       ),
 
                       const SizedBox(height: AppTheme.spacingLarge),

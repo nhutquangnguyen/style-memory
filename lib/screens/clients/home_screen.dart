@@ -302,20 +302,21 @@ class _ModernClientCard extends StatelessWidget {
                     ),
                     const SizedBox(height: AppTheme.spacingXs),
 
-                    // Contact info
-                    if (client.phone != null) ...[
+                    // Birthday info only
+                    if (client.birthday != null) ...[
                       Row(
                         children: [
                           Icon(
-                            Icons.phone_rounded,
+                            Icons.cake_outlined,
                             size: AppTheme.iconSm,
                             color: AppTheme.secondaryTextColor,
                           ),
                           const SizedBox(width: AppTheme.spacingXs),
                           Text(
-                            client.phone!,
+                            client.formattedBirthday ?? '',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.secondaryTextColor,
+                              fontSize: 12,
                             ),
                           ),
                         ],
@@ -368,6 +369,30 @@ class _ModernClientCard extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // Latest service badge on the right
+              if (lastVisit != null) ...[
+                const SizedBox(width: AppTheme.spacingSmall),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    lastVisit.shortDescription,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
 
             ],
           ),

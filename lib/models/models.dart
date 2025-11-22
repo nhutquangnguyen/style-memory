@@ -1,4 +1,5 @@
 export 'client.dart';
+export 'image_quality.dart';
 export 'photo.dart';
 export 'service.dart';
 export 'staff.dart';

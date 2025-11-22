@@ -9,6 +9,7 @@ import '../providers/providers.dart';
 import '../services/supabase_service.dart';
 import '../services/photo_service.dart';
 import '../services/wasabi_service.dart';
+import '../services/image_quality_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common/modern_card.dart';
 import '../widgets/common/modern_button.dart';
@@ -339,11 +340,14 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
   Future<void> _pickFromCamera() async {
     try {
+      final imageQuality = await ImageQualityService.getImageQuality();
+      final isRawQuality = imageQuality.jpegQuality >= 95;
+
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: isRawQuality ? null : 1920,
+        maxHeight: isRawQuality ? null : 1080,
+        imageQuality: imageQuality.jpegQuality,
         preferredCameraDevice: CameraDevice.rear,
       );
 
@@ -369,10 +373,13 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
 
   Future<void> _pickFromGallery() async {
     try {
+      final imageQuality = await ImageQualityService.getImageQuality();
+      final isRawQuality = imageQuality.jpegQuality >= 95;
+
       final List<XFile> photos = await _picker.pickMultiImage(
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: isRawQuality ? null : 1920,
+        maxHeight: isRawQuality ? null : 1080,
+        imageQuality: imageQuality.jpegQuality,
         limit: 10, // Limit to prevent memory issues
       );
 

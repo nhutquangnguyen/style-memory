@@ -26,8 +26,10 @@ class _EditClientScreenState extends State<EditClientScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _birthdayController = TextEditingController();
 
   Client? _client;
+  DateTime? _selectedBirthday;
   bool _isInitialized = false;
 
   @override
@@ -48,6 +50,8 @@ class _EditClientScreenState extends State<EditClientScreen> {
         _nameController.text = client.fullName;
         _phoneController.text = client.phone ?? '';
         _emailController.text = client.email ?? '';
+        _selectedBirthday = client.birthday;
+        _updateBirthdayDisplay();
         _isInitialized = true;
       });
     } else {
@@ -65,7 +69,16 @@ class _EditClientScreenState extends State<EditClientScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
+    _birthdayController.dispose();
     super.dispose();
+  }
+
+  void _updateBirthdayDisplay() {
+    if (_selectedBirthday != null) {
+      _birthdayController.text = '${_selectedBirthday!.day}/${_selectedBirthday!.month}/${_selectedBirthday!.year}';
+    } else {
+      _birthdayController.clear();
+    }
   }
 
   void _handleCancel() {
@@ -83,15 +96,18 @@ class _EditClientScreenState extends State<EditClientScreen> {
     final clientsProvider = context.read<ClientsProvider>();
 
     // Create updated client with new values
+    final phoneText = _phoneController.text.trim();
+    final emailText = _emailController.text.trim();
+
     final updatedClient = _client!.copyWith(
       fullName: _nameController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty
-          ? null
-          : _phoneController.text.trim(),
-      email: _emailController.text.trim().isEmpty
-          ? null
-          : _emailController.text.trim(),
+      phone: phoneText.isEmpty ? null : phoneText,
+      email: emailText.isEmpty ? null : emailText,
+      birthday: _selectedBirthday,
       updatedAt: DateTime.now(),
+      clearPhone: phoneText.isEmpty,
+      clearEmail: emailText.isEmpty,
+      clearBirthday: _selectedBirthday == null,
     );
 
     final success = await clientsProvider.updateClient(updatedClient);
@@ -112,6 +128,31 @@ class _EditClientScreenState extends State<EditClientScreen> {
         pathParameters: {'clientId': widget.clientId},
       );
     }
+  }
+
+  Future<void> _selectBirthday() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedBirthday ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: 'Select Birthday',
+      fieldLabelText: 'Date',
+    );
+
+    if (picked != null && picked != _selectedBirthday) {
+      setState(() {
+        _selectedBirthday = picked;
+        _updateBirthdayDisplay();
+      });
+    }
+  }
+
+  void _clearBirthday() {
+    setState(() {
+      _selectedBirthday = null;
+      _updateBirthdayDisplay();
+    });
   }
 
   String? _validateEmail(String? value) {
@@ -224,9 +265,28 @@ class _EditClientScreenState extends State<EditClientScreen> {
                           hintText: l10n.enterEmailAddress,
                         ),
                         keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _handleUpdateClient(),
+                        textInputAction: TextInputAction.next,
                         validator: _validateEmail,
+                      ),
+
+                      const SizedBox(height: AppTheme.spacingMedium),
+
+                      // Birthday field
+                      TextFormField(
+                        controller: _birthdayController,
+                        decoration: InputDecoration(
+                          labelText: 'Birthday (optional)',
+                          hintText: 'Tap to select date',
+                          suffixIcon: _selectedBirthday != null
+                              ? IconButton(
+                                  onPressed: _clearBirthday,
+                                  icon: const Icon(Icons.clear),
+                                  tooltip: 'Clear birthday',
+                                )
+                              : const Icon(Icons.cake_outlined),
+                        ),
+                        readOnly: true,
+                        onTap: _selectBirthday,
                       ),
 
                       const SizedBox(height: AppTheme.spacingLarge),
