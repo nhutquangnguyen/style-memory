@@ -7,6 +7,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../widgets/client/avatar_picker.dart';
 import '../../l10n/app_localizations.dart';
 
 class EditClientScreen extends StatefulWidget {
@@ -30,6 +31,7 @@ class _EditClientScreenState extends State<EditClientScreen> {
 
   Client? _client;
   DateTime? _selectedBirthday;
+  String? _updatedAvatarUrl;
   bool _isInitialized = false;
 
   @override
@@ -104,10 +106,12 @@ class _EditClientScreenState extends State<EditClientScreen> {
       phone: phoneText.isEmpty ? null : phoneText,
       email: emailText.isEmpty ? null : emailText,
       birthday: _selectedBirthday,
+      avatarUrl: _updatedAvatarUrl ?? _client!.avatarUrl,
       updatedAt: DateTime.now(),
       clearPhone: phoneText.isEmpty,
       clearEmail: emailText.isEmpty,
       clearBirthday: _selectedBirthday == null,
+      clearAvatarUrl: _updatedAvatarUrl == null && _client!.avatarUrl != null,
     );
 
     final success = await clientsProvider.updateClient(updatedClient);
@@ -223,6 +227,21 @@ class _EditClientScreenState extends State<EditClientScreen> {
                         ),
                         const SizedBox(height: AppTheme.spacingLarge),
                       ],
+
+                      // Avatar picker
+                      if (_client != null)
+                        Center(
+                          child: AvatarPicker(
+                            client: _client,
+                            onAvatarChanged: (avatarUrl) {
+                              setState(() {
+                                _updatedAvatarUrl = avatarUrl;
+                              });
+                            },
+                          ),
+                        ),
+
+                      const SizedBox(height: AppTheme.spacingLarge),
 
                       // Client name field
                       TextFormField(

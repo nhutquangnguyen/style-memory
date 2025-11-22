@@ -5,6 +5,7 @@ class Client {
   final String? phone;
   final String? email;
   final DateTime? birthday;
+  final String? avatarUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +16,7 @@ class Client {
     this.phone,
     this.email,
     this.birthday,
+    this.avatarUrl,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +29,7 @@ class Client {
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       birthday: json['birthday'] != null ? DateTime.parse(json['birthday'] as String) : null,
+      avatarUrl: json['avatar_url'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -40,6 +43,7 @@ class Client {
       'phone': phone,
       'email': email,
       'birthday': birthday?.toIso8601String(),
+      'avatar_url': avatarUrl,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -52,11 +56,13 @@ class Client {
     String? phone,
     String? email,
     DateTime? birthday,
+    String? avatarUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool clearPhone = false,
     bool clearEmail = false,
     bool clearBirthday = false,
+    bool clearAvatarUrl = false,
   }) {
     return Client(
       id: id ?? this.id,
@@ -65,6 +71,7 @@ class Client {
       phone: clearPhone ? null : (phone ?? this.phone),
       email: clearEmail ? null : (email ?? this.email),
       birthday: clearBirthday ? null : (birthday ?? this.birthday),
+      avatarUrl: clearAvatarUrl ? null : (avatarUrl ?? this.avatarUrl),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

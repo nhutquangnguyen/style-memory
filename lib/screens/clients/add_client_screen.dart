@@ -6,6 +6,7 @@ import '../../providers/providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/error_banner.dart';
+import '../../widgets/client/avatar_picker.dart';
 import '../../l10n/app_localizations.dart';
 
 class AddClientScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
   final _birthdayController = TextEditingController();
 
   DateTime? _selectedBirthday;
+  String? _avatarUrl;
 
   @override
   void dispose() {
@@ -70,6 +72,8 @@ class _AddClientScreenState extends State<AddClientScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final clientsProvider = context.read<ClientsProvider>();
+
+    // First create the client to get an ID
     final success = await clientsProvider.createClient(
       fullName: _nameController.text.trim(),
       phone: _phoneController.text.trim().isEmpty
@@ -79,6 +83,7 @@ class _AddClientScreenState extends State<AddClientScreen> {
           ? null
           : _emailController.text.trim(),
       birthday: _selectedBirthday,
+      avatarUrl: _avatarUrl,
     );
 
     if (success && mounted) {
@@ -151,6 +156,19 @@ class _AddClientScreenState extends State<AddClientScreen> {
                         ),
                         const SizedBox(height: AppTheme.spacingLarge),
                       ],
+
+                      // Avatar picker
+                      Center(
+                        child: AvatarPicker(
+                          onAvatarChanged: (avatarUrl) {
+                            setState(() {
+                              _avatarUrl = avatarUrl;
+                            });
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: AppTheme.spacingLarge),
 
                       // Client name field
                       TextFormField(

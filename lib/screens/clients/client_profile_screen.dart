@@ -12,6 +12,7 @@ import '../../widgets/common/cached_image.dart';
 import '../../widgets/common/star_rating.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
+import '../../widgets/client/client_avatar.dart';
 import '../loved_styles/loved_styles_screen.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -165,7 +166,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
                     ),
                   ),
 
-                // Client information section
+                // Client avatar and basic info section
+                _buildClientHeaderSection(client),
+
+                // Client contact information section
                 _buildClientInfoSection(client),
 
                 // Search bar
@@ -191,6 +195,53 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildClientHeaderSection(Client client) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(
+        AppTheme.spacingMedium,
+        AppTheme.spacingMedium,
+        AppTheme.spacingMedium,
+        AppTheme.spacingSmall,
+      ),
+      child: Row(
+        children: [
+          // Avatar
+          ClientAvatarLarge(
+            client: client,
+            onTap: () => _showEditClientDialog(context, client),
+          ),
+
+          const SizedBox(width: AppTheme.spacingMedium),
+
+          // Client basic info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  client.fullName,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryTextColor,
+                  ),
+                ),
+
+                const SizedBox(height: AppTheme.spacingXs),
+
+                Text(
+                  'Client',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.secondaryTextColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

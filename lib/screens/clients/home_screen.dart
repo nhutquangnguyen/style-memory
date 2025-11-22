@@ -10,6 +10,7 @@ import '../../widgets/common/error_banner.dart';
 import '../../widgets/common/modern_card.dart';
 import '../../widgets/common/modern_button.dart';
 import '../../widgets/common/modern_input.dart';
+import '../../widgets/client/client_avatar.dart';
 import '../../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -266,26 +267,10 @@ class _ModernClientCard extends StatelessWidget {
           child: Row(
             children: [
               // Avatar
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppTheme.borderRadiusXl),
-                  border: Border.all(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
-                    width: 2,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    client.initials,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ),
+              ClientAvatar(
+                client: client,
+                size: 56,
+                showBorder: true,
               ),
               const SizedBox(width: AppTheme.spacingMedium),
 
