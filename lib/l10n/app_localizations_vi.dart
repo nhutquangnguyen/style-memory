@@ -238,6 +238,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get failedToUpdateAddress => 'Không thể cập nhật địa chỉ';
 
   @override
+  String get watermarkSettings => 'Cài Đặt Watermark';
+
+  @override
+  String get useSalonWatermark => 'Dùng Thông Tin Salon Cho Watermark';
+
+  @override
+  String get useSalonWatermarkDescription =>
+      'Hiển thị tên salon, số điện thoại và địa chỉ trên ảnh chia sẻ thay vì tên ứng dụng';
+
+  @override
   String get lovedStyles => 'Phong Cách Yêu Thích';
 
   @override

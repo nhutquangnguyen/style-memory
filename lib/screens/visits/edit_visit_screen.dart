@@ -147,11 +147,39 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
     });
   }
 
-  void _markExistingPhotoForDeletion(String photoId) {
+  void _showDeleteNewPhotoConfirmation(int index) {
+    final l10n = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.confirmDelete),
+        content: const Text('Are you sure you want to remove this new photo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _removeNewImage(index);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _markPhotoForDeletion(String photoId) {
     setState(() {
       if (_photosToDelete.contains(photoId)) {
+        // If already marked for deletion, restore it
         _photosToDelete.remove(photoId);
       } else {
+        // Mark for deletion (will be hidden from UI)
         _photosToDelete.add(photoId);
       }
       _markAsChanged();
@@ -164,8 +192,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
     if (_originalVisit == null) return;
 
     // Validation: At least one photo or notes must exist
-    final remainingPhotos = _existingPhotos.where((photo) => !_photosToDelete.contains(photo.id)).length;
-    final totalPhotos = remainingPhotos + _newImages.length;
+    final totalPhotos = _existingPhotos.length + _newImages.length;
     final hasNotes = _notesController.text.trim().isNotEmpty;
 
     if (totalPhotos == 0 && !hasNotes) {
@@ -194,7 +221,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
         return;
       }
 
-      // Delete marked photos
+      // Delete photos marked for deletion from backend
       for (final photoId in _photosToDelete) {
         await visitsProvider.deletePhoto(photoId);
       }
@@ -229,30 +256,38 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
     );
   }
 
-  void _showUnsavedChangesDialog() {
-    final l10n = AppLocalizations.of(context)!;
+  void _handleCancelButton() {
+    // Always restore to original state and leave (no dialogs)
+    _discardChangesAndLeave();
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Discard changes?'),
-        content: Text('You have unsaved changes. Are you sure you want to leave?'),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () {
-              context.pop(); // Close dialog
-              context.goNamed('visit_details', pathParameters: {'visitId': widget.visitId}); // Go back to visit details
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('Discard'),
-          ),
-        ],
-      ),
-    );
+  void _discardChangesAndLeave() {
+    // Restore all photos marked for deletion and reset all fields
+    setState(() {
+      _photosToDelete.clear();
+      _newImages.clear();
+      _notesController.text = _originalVisit?.notes ?? '';
+
+      // Restore original service and staff selections
+      if (_originalVisit?.serviceId != null) {
+        final serviceProvider = context.read<ServiceProvider>();
+        _selectedService = serviceProvider.getServiceById(_originalVisit!.serviceId!);
+      } else {
+        _selectedService = null;
+      }
+
+      if (_originalVisit?.staffId != null) {
+        final staffProvider = context.read<StaffProvider>();
+        _selectedStaff = staffProvider.getStaffById(_originalVisit!.staffId!);
+      } else {
+        _selectedStaff = null;
+      }
+
+      _hasChanges = false;
+    });
+
+    // Navigate back to visit details
+    context.goNamed('visit_details', pathParameters: {'visitId': widget.visitId});
   }
 
   @override
@@ -263,11 +298,8 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          if (_hasChanges) {
-            _showUnsavedChangesDialog();
-          } else {
-            context.goNamed('visit_details', pathParameters: {'visitId': widget.visitId});
-          }
+          // Always restore to original state and leave (no dialogs)
+          _discardChangesAndLeave();
         }
       },
       child: LoadingOverlay(
@@ -278,7 +310,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
             title: Text(l10n.editVisit),
             actions: [
               TextButton(
-                onPressed: _hasChanges ? null : () => context.goNamed('visit_details', pathParameters: {'visitId': widget.visitId}),
+                onPressed: () => _handleCancelButton(),
                 child: Text(l10n.cancel),
               ),
             ],
@@ -621,12 +653,16 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
                 mainAxisSpacing: AppTheme.spacingSmall,
                 childAspectRatio: 1,
               ),
-              itemCount: _existingPhotos.length + _newImages.length,
+              itemCount: totalPhotos,
               itemBuilder: (context, index) {
-                if (index < _existingPhotos.length) {
-                  return _buildExistingPhotoItem(_existingPhotos[index]);
+                // Filter out photos marked for deletion
+                final visibleExistingPhotos = _existingPhotos.where((photo) => !_photosToDelete.contains(photo.id)).toList();
+
+                if (index < visibleExistingPhotos.length) {
+                  return _buildExistingPhotoItem(visibleExistingPhotos[index]);
                 } else {
-                  return _buildNewPhotoItem(_newImages[index - _existingPhotos.length], index - _existingPhotos.length);
+                  final newImageIndex = index - visibleExistingPhotos.length;
+                  return _buildNewPhotoItem(_newImages[newImageIndex], newImageIndex);
                 }
               },
             ),
@@ -636,16 +672,14 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
   }
 
   Widget _buildExistingPhotoItem(Photo photo) {
-    final isMarkedForDeletion = _photosToDelete.contains(photo.id);
-
     return Stack(
       children: [
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isMarkedForDeletion ? Colors.red : Colors.grey.withValues(alpha: 0.3),
-              width: isMarkedForDeletion ? 2 : 1,
+              color: Colors.grey.withValues(alpha: 0.3),
+              width: 1,
             ),
           ),
           child: ClipRRect(
@@ -654,21 +688,11 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
               future: Provider.of<VisitsProvider>(context, listen: false).getPhotoUrl(photo.storagePath),
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Image.network(
-                        snapshot.data!,
-                        fit: BoxFit.cover,
-                      ),
-                      if (isMarkedForDeletion)
-                        Container(
-                          color: Colors.red.withValues(alpha: 0.7),
-                          child: const Center(
-                            child: Icon(Icons.delete, color: Colors.white, size: 32),
-                          ),
-                        ),
-                    ],
+                  return Image.network(
+                    snapshot.data!,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
                   );
                 }
                 return Container(
@@ -683,15 +707,15 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
           top: 4,
           right: 4,
           child: GestureDetector(
-            onTap: () => _markExistingPhotoForDeletion(photo.id),
+            onTap: () => _markPhotoForDeletion(photo.id),
             child: Container(
               padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isMarkedForDeletion ? Colors.green : Colors.red,
+              decoration: const BoxDecoration(
+                color: Colors.red,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                isMarkedForDeletion ? Icons.undo : Icons.close,
+              child: const Icon(
+                Icons.close,
                 color: Colors.white,
                 size: 16,
               ),
@@ -724,7 +748,7 @@ class _EditVisitScreenState extends State<EditVisitScreen> {
           top: 4,
           right: 4,
           child: GestureDetector(
-            onTap: () => _removeNewImage(index),
+            onTap: () => _showDeleteNewPhotoConfirmation(index),
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: const BoxDecoration(

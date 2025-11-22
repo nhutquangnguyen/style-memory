@@ -1,12 +1,15 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
 import '../models/visit.dart';
 import '../models/photo.dart';
+import '../providers/stores_provider.dart';
 import '../l10n/app_localizations.dart';
+import 'watermark_service.dart';
 
 class ShareService {
   /// Share all photos from a visit with visit details
@@ -31,15 +34,32 @@ class ShareService {
       for (int i = 0; i < photoUrls.length; i++) {
         final url = photoUrls[i];
         try {
-          final response = await http.get(Uri.parse(url));
+          final response = await http.get(
+            Uri.parse(url),
+          ).timeout(
+            const Duration(seconds: 30),
+            onTimeout: () => throw Exception('Photo download timeout after 30 seconds'),
+          );
 
           if (response.statusCode == 200) {
             final bytes = response.bodyBytes;
+
+            // Add elegant, subtle watermark to the image
+            final watermarkText = await _getWatermarkText(context);
+            final watermarkedBytes = await WatermarkService.addWatermarkToImage(
+              bytes,
+              watermarkText: watermarkText,
+              opacity: 0.75, // More visible and bold
+              position: WatermarkPosition.bottomLeft,
+              fontSize: 32, // Larger for better visibility
+              textColor: Colors.white,
+            );
+
             final fileName = 'style_memory_photo_${i + 1}.jpg';
             final filePath = '${tempDir.path}/$fileName';
 
             final file = File(filePath);
-            await file.writeAsBytes(bytes);
+            await file.writeAsBytes(watermarkedBytes);
 
             photoFiles.add(XFile(filePath));
           }
@@ -51,7 +71,7 @@ class ShareService {
 
       if (photoFiles.isEmpty) {
         if (context.mounted) {
-          _showMessage(context, 'Failed to prepare photos for sharing');
+          _showMessage(context, 'Failed to prepare photos for sharing. Please check your internet connection and try again.');
         }
         return;
       }
@@ -86,7 +106,12 @@ class ShareService {
 
       // Download photo to temporary file
       final tempDir = await getTemporaryDirectory();
-      final response = await http.get(Uri.parse(photoUrl));
+      final response = await http.get(
+        Uri.parse(photoUrl),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () => throw Exception('Photo download timeout after 30 seconds'),
+      );
 
       if (response.statusCode != 200) {
         if (context.mounted) {
@@ -96,11 +121,23 @@ class ShareService {
       }
 
       final bytes = response.bodyBytes;
+
+      // Add elegant, subtle watermark to the image
+      final watermarkText = await _getWatermarkText(context);
+      final watermarkedBytes = await WatermarkService.addWatermarkToImage(
+        bytes,
+        watermarkText: watermarkText,
+        opacity: 0.75, // More visible and bold
+        position: WatermarkPosition.bottomLeft,
+        fontSize: 32, // Larger for better visibility
+        textColor: Colors.white,
+      );
+
       final fileName = 'style_memory_${photoType.displayName.toLowerCase()}_view.jpg';
       final filePath = '${tempDir.path}/$fileName';
 
       final file = File(filePath);
-      await file.writeAsBytes(bytes);
+      await file.writeAsBytes(watermarkedBytes);
 
       // Create share text with visit details
       final shareText = _createShareText(visit, photoType: photoType);
@@ -159,6 +196,46 @@ class ShareService {
         }
       }
     });
+  }
+
+  /// Get watermark text based on user preference
+  static Future<String> _getWatermarkText(BuildContext context) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final useSalonWatermark = prefs.getBool('use_salon_watermark') ?? false;
+
+      if (useSalonWatermark && context.mounted) {
+        final storesProvider = context.read<StoresProvider>();
+        final currentStore = storesProvider.currentStore;
+
+        if (currentStore != null) {
+          // Create 3-line salon watermark: name, phone, address
+          final lines = <String>[];
+
+          if (currentStore.name.isNotEmpty) {
+            lines.add(currentStore.name);
+          }
+
+          if (currentStore.phone.isNotEmpty) {
+            lines.add(currentStore.phone);
+          }
+
+          if (currentStore.address.isNotEmpty) {
+            lines.add(currentStore.address);
+          }
+
+          if (lines.isNotEmpty) {
+            return lines.join('\n');
+          }
+        }
+      }
+
+      // Default to app name
+      return 'StyleMemory';
+    } catch (e) {
+      // Fallback to app name on error
+      return 'StyleMemory';
+    }
   }
 
 }

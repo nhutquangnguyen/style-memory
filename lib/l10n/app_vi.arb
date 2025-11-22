@@ -86,6 +86,10 @@
   "failedToUpdatePhoneNumber": "Không thể cập nhật số điện thoại",
   "failedToUpdateAddress": "Không thể cập nhật địa chỉ",
 
+  "watermarkSettings": "Cài Đặt Watermark",
+  "useSalonWatermark": "Dùng Thông Tin Salon Cho Watermark",
+  "useSalonWatermarkDescription": "Hiển thị tên salon, số điện thoại và địa chỉ trên ảnh chia sẻ thay vì tên ứng dụng",
+
   "lovedStyles": "Phong Cách Yêu Thích",
   "gallery": "Thư Viện",
   "capture": "Chụp Ảnh",

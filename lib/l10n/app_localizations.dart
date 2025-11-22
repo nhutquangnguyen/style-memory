@@ -554,6 +554,24 @@ abstract class AppLocalizations {
   /// **'Failed to update address'**
   String get failedToUpdateAddress;
 
+  /// No description provided for @watermarkSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Watermark Settings'**
+  String get watermarkSettings;
+
+  /// No description provided for @useSalonWatermark.
+  ///
+  /// In en, this message translates to:
+  /// **'Use Salon Info for Watermark'**
+  String get useSalonWatermark;
+
+  /// No description provided for @useSalonWatermarkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Show salon name, phone, and address on shared photos instead of app name'**
+  String get useSalonWatermarkDescription;
+
   /// No description provided for @lovedStyles.
   ///
   /// In en, this message translates to:

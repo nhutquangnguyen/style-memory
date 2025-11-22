@@ -238,6 +238,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToUpdateAddress => 'Failed to update address';
 
   @override
+  String get watermarkSettings => 'Watermark Settings';
+
+  @override
+  String get useSalonWatermark => 'Use Salon Info for Watermark';
+
+  @override
+  String get useSalonWatermarkDescription =>
+      'Show salon name, phone, and address on shared photos instead of app name';
+
+  @override
   String get lovedStyles => 'Loved Styles';
 
   @override

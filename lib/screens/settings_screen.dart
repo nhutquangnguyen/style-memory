@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../providers/providers.dart';
 import '../theme/app_theme.dart';
@@ -20,11 +21,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   PackageInfo? _packageInfo;
+  bool _useSalonWatermark = false;
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
+    _loadWatermarkSetting();
     // Initialize stores provider after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeStoresProvider();
@@ -167,6 +170,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           : l10n.tapToAddAddress,
                         onTap: () => _showEditStoreAddressDialog(context),
                       ),
+
+                      // Watermark Settings
+                      const SizedBox(height: AppTheme.spacingSmall),
+                      _buildWatermarkToggle(context, l10n),
                     ],
                   );
                 },
@@ -826,6 +833,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
+  }
+
+  // Load watermark setting from SharedPreferences
+  Future<void> _loadWatermarkSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _useSalonWatermark = prefs.getBool('use_salon_watermark') ?? false;
+      });
+    }
+  }
+
+  // Save watermark setting to SharedPreferences
+  Future<void> _saveWatermarkSetting(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('use_salon_watermark', value);
+    if (mounted) {
+      setState(() {
+        _useSalonWatermark = value;
+      });
+    }
+  }
+
+  // Build watermark toggle widget
+  Widget _buildWatermarkToggle(BuildContext context, AppLocalizations l10n) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.branding_watermark,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            title: Text(
+              l10n.useSalonWatermark,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            subtitle: Text(
+              l10n.useSalonWatermarkDescription,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppTheme.mutedTextColor,
+              ),
+            ),
+            trailing: Switch.adaptive(
+              value: _useSalonWatermark,
+              onChanged: (value) => _saveWatermarkSetting(value),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
 }

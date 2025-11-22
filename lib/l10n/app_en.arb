@@ -89,6 +89,10 @@
   "failedToUpdatePhoneNumber": "Failed to update phone number",
   "failedToUpdateAddress": "Failed to update address",
 
+  "watermarkSettings": "Watermark Settings",
+  "useSalonWatermark": "Use Salon Info for Watermark",
+  "useSalonWatermarkDescription": "Show salon name, phone, and address on shared photos instead of app name",
+
   "lovedStyles": "Loved Styles",
   "gallery": "Gallery",
   "capture": "Capture",

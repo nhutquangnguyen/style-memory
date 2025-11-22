@@ -176,16 +176,12 @@ class ClientsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updatedClient = client.copyWith(
-        updatedAt: DateTime.now(),
-      );
-
-      await SupabaseService.updateClient(updatedClient);
+      await SupabaseService.updateClient(client);
 
       // Update in local list
       final index = _clients.indexWhere((c) => c.id == client.id);
       if (index != -1) {
-        _clients[index] = updatedClient;
+        _clients[index] = client;
       }
 
       // Update cache timestamp since we modified data

@@ -526,8 +526,7 @@ class _SimplePhotoNotesScreenState extends State<SimplePhotoNotesScreen> {
     }).toList();
 
     // Execute all uploads in parallel
-    final results = await Future.wait(uploadFutures);
-    final successfulPhotos = results.whereType<Photo>().toList();
+    await Future.wait(uploadFutures);
   }
 
   @override
