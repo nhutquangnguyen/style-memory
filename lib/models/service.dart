@@ -1,6 +1,7 @@
 class Service {
   final String id;
   final String userId;
+  final String storeId;
   final String name;
   final bool isActive;
   final DateTime createdAt;
@@ -9,6 +10,7 @@ class Service {
   Service({
     required this.id,
     required this.userId,
+    required this.storeId,
     required this.name,
     this.isActive = true,
     required this.createdAt,
@@ -19,6 +21,7 @@ class Service {
     return Service(
       id: json['id'] as String,
       userId: json['user_id'] as String,
+      storeId: json['store_id'] as String,
       name: json['name'] as String,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -29,6 +32,7 @@ class Service {
   Map<String, dynamic> toJson() {
     final json = <String, dynamic>{
       'user_id': userId,
+      'store_id': storeId,
       'name': name,
       'is_active': isActive,
       'created_at': createdAt.toIso8601String(),
@@ -46,6 +50,7 @@ class Service {
   Service copyWith({
     String? id,
     String? userId,
+    String? storeId,
     String? name,
     bool? isActive,
     DateTime? createdAt,
@@ -54,6 +59,7 @@ class Service {
     return Service(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      storeId: storeId ?? this.storeId,
       name: name ?? this.name,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

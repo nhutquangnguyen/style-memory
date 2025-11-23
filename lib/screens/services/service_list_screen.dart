@@ -200,7 +200,7 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.deleteService),
-        content: Text('${l10n.confirmDeleteService}'.replaceAll('{serviceName}', service.name)),
+        content: Text(l10n.confirmDeleteService(service.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -432,6 +432,7 @@ class _ServiceDialogState extends State<_ServiceDialog> {
     final service = Service(
       id: widget.service?.id ?? '',
       userId: widget.service?.userId ?? SupabaseService.currentUser!.id,
+      storeId: widget.service?.storeId ?? context.read<StoresProvider>().currentStore?.id ?? '',
       name: _nameController.text.trim(),
       isActive: widget.service?.isActive ?? true,
       createdAt: widget.service?.createdAt ?? DateTime.now(),
