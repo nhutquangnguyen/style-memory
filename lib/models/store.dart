@@ -6,6 +6,9 @@ class Store {
   final String name;
   final String phone;
   final String address;
+  final String? slug;
+  final String? avatar;
+  final String? cover;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +18,9 @@ class Store {
     required this.name,
     required this.phone,
     required this.address,
+    this.slug,
+    this.avatar,
+    this.cover,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +33,9 @@ class Store {
       name: json['name'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       address: json['address'] as String? ?? '',
+      slug: json['slug'] as String?,
+      avatar: json['avatar'] as String?,
+      cover: json['cover'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -40,6 +49,9 @@ class Store {
       'name': name,
       'phone': phone,
       'address': address,
+      'slug': slug,
+      'avatar': avatar,
+      'cover': cover,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -51,6 +63,9 @@ class Store {
     String name = 'My Salon',
     String phone = '',
     String address = '',
+    String? slug,
+    String? avatar,
+    String? cover,
   }) {
     final now = DateTime.now();
     return Store(
@@ -59,6 +74,9 @@ class Store {
       name: name,
       phone: phone,
       address: address,
+      slug: slug,
+      avatar: avatar,
+      cover: cover,
       createdAt: now,
       updatedAt: now,
     );
@@ -71,6 +89,9 @@ class Store {
     String? name,
     String? phone,
     String? address,
+    String? slug,
+    String? avatar,
+    String? cover,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -80,6 +101,9 @@ class Store {
       name: name ?? this.name,
       phone: phone ?? this.phone,
       address: address ?? this.address,
+      slug: slug ?? this.slug,
+      avatar: avatar ?? this.avatar,
+      cover: cover ?? this.cover,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -87,7 +111,12 @@ class Store {
 
   // Check if store has custom information (not default)
   bool get isCustomized {
-    return name != 'My Salon' || phone.isNotEmpty || address.isNotEmpty;
+    return name != 'My Salon' ||
+           phone.isNotEmpty ||
+           address.isNotEmpty ||
+           slug != null ||
+           avatar != null ||
+           cover != null;
   }
 
   // Get formatted store information for display
@@ -109,6 +138,21 @@ class Store {
     return parts.join(' • ');
   }
 
+  // Get store URL slug or generate from name
+  String get urlSlug {
+    if (slug != null && slug!.isNotEmpty) {
+      return slug!;
+    }
+    // Fallback to ID if no slug
+    return id;
+  }
+
+  // Check if store has avatar image
+  bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
+
+  // Check if store has cover image
+  bool get hasCover => cover != null && cover!.isNotEmpty;
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
@@ -117,11 +161,14 @@ class Store {
         other.ownerId == ownerId &&
         other.name == name &&
         other.phone == phone &&
-        other.address == address;
+        other.address == address &&
+        other.slug == slug &&
+        other.avatar == avatar &&
+        other.cover == cover;
   }
 
   @override
-  int get hashCode => Object.hash(id, ownerId, name, phone, address);
+  int get hashCode => Object.hash(id, ownerId, name, phone, address, slug, avatar, cover);
 
   @override
   String toString() {

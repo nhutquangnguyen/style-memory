@@ -121,6 +121,20 @@ class ImageCacheManager {
     }
   }
 
+  // Clear specific URL from cache
+  void clearUrl(String url) {
+    _memoryCache.remove(url);
+    _loadingCache.remove(url);
+    _accessOrder.remove(url);
+  }
+
+  // Clear all caches
+  void clearAll() {
+    _memoryCache.clear();
+    _loadingCache.clear();
+    _accessOrder.clear();
+  }
+
   // Get cache statistics for debugging
   Map<String, int> getCacheStats() {
     return {

@@ -6,6 +6,9 @@ import '../providers/providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/common/loading_overlay.dart';
 import '../widgets/common/modern_card.dart';
+import '../widgets/common/cached_image.dart';
+import '../services/store_image_service.dart';
+import '../models/store.dart';
 import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -147,79 +150,86 @@ class _HomeScreenState extends State<HomeScreen> {
     final store = storesProvider.currentStore;
 
     return ModernCard(
+      padding: EdgeInsets.zero,
+      onTap: () {
+        context.go('/store/profile');
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppTheme.spacingMedium),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.store_rounded,
-                  size: AppTheme.iconXl,
-                  color: AppTheme.primaryColor,
-                ),
-              ),
-              const SizedBox(width: AppTheme.spacingMedium),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      store?.name ?? 'Style Memory',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+          // Cover Image Section
+          if (store?.hasCover == true)
+            _buildCoverImage(store!)
+          else
+            _buildDefaultCover(),
+
+          // Store Info Content
+          Padding(
+            padding: const EdgeInsets.all(AppTheme.spacingMedium),
+            child: Row(
+              children: [
+                // Store Avatar
+                _buildStoreAvatar(store),
+
+                const SizedBox(width: AppTheme.spacingMedium),
+
+                // Store Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        store?.name ?? 'Style Memory',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    if (store != null) ...[
-                      const SizedBox(height: AppTheme.spacingXs),
-                      if (store.address.isNotEmpty)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              size: AppTheme.iconSm,
-                              color: AppTheme.secondaryTextColor,
-                            ),
-                            const SizedBox(width: AppTheme.spacingXs),
-                            Expanded(
-                              child: Text(
-                                store.address,
+                      if (store != null) ...[
+                        const SizedBox(height: AppTheme.spacingXs),
+                        if (store.address.isNotEmpty)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: AppTheme.iconSm,
+                                color: AppTheme.secondaryTextColor,
+                              ),
+                              const SizedBox(width: AppTheme.spacingXs),
+                              Expanded(
+                                child: Text(
+                                  store.address,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppTheme.secondaryTextColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (store.phone.isNotEmpty) ...[
+                          const SizedBox(height: AppTheme.spacingXs),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.phone_outlined,
+                                size: AppTheme.iconSm,
+                                color: AppTheme.secondaryTextColor,
+                              ),
+                              const SizedBox(width: AppTheme.spacingXs),
+                              Text(
+                                store.phone,
                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   color: AppTheme.secondaryTextColor,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      if (store.phone.isNotEmpty) ...[
-                        const SizedBox(height: AppTheme.spacingXs),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.phone_outlined,
-                              size: AppTheme.iconSm,
-                              color: AppTheme.secondaryTextColor,
-                            ),
-                            const SizedBox(width: AppTheme.spacingXs),
-                            Text(
-                              store.phone,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.secondaryTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -518,6 +528,146 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  // Build store cover image
+  Widget _buildCoverImage(Store store) {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(AppTheme.borderRadiusLarge),
+          topRight: Radius.circular(AppTheme.borderRadiusLarge),
+        ),
+      ),
+      child: FutureBuilder<String?>(
+        future: StoreImageService.getStoreImageUrl(store.cover!),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            return CachedImage(
+              imageUrl: snapshot.data!,
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: 160,
+              placeholder: _buildDefaultCover(),
+              errorWidget: _buildDefaultCover(),
+            );
+          }
+          return _buildDefaultCover();
+        },
+      ),
+    );
+  }
+
+  // Build default cover when no cover image is set
+  Widget _buildDefaultCover() {
+    return Container(
+      height: 160,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(AppTheme.borderRadiusLarge),
+          topRight: Radius.circular(AppTheme.borderRadiusLarge),
+        ),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryColor.withValues(alpha: 0.8),
+            AppTheme.primaryColor.withValues(alpha: 0.6),
+            AppTheme.primaryColor.withValues(alpha: 0.4),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.store_rounded,
+              size: 48,
+              color: Colors.white,
+            ),
+            SizedBox(height: 8),
+            Text(
+              'Your Store',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build store avatar
+  Widget _buildStoreAvatar(Store? store) {
+    if (store?.hasAvatar == true) {
+      return FutureBuilder<String?>(
+        future: StoreImageService.getStoreImageUrl(store!.avatar!),
+        builder: (context, snapshot) {
+          if (snapshot.hasData && snapshot.data != null) {
+            return Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 3,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: CachedImage(
+                  imageUrl: snapshot.data!,
+                  fit: BoxFit.cover,
+                  width: 64,
+                  height: 64,
+                  placeholder: _buildDefaultAvatar(),
+                  errorWidget: _buildDefaultAvatar(),
+                ),
+              ),
+            );
+          }
+          return _buildDefaultAvatar();
+        },
+      );
+    }
+
+    return _buildDefaultAvatar();
+  }
+
+  // Build default avatar when no avatar image is set
+  Widget _buildDefaultAvatar() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.2),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        Icons.store_rounded,
+        size: 32,
+        color: AppTheme.primaryColor,
       ),
     );
   }

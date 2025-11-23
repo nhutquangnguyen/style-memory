@@ -173,6 +173,42 @@ class StoresProvider extends ChangeNotifier {
     return await updateStore(updatedStore);
   }
 
+  /// Update store slug
+  Future<bool> updateStoreSlug(String slug) async {
+    if (_currentStore == null) return false;
+
+    final updatedStore = _currentStore!.copyWith(
+      slug: slug.isEmpty ? null : slug,
+      updatedAt: DateTime.now(),
+    );
+
+    return await updateStore(updatedStore);
+  }
+
+  /// Update store avatar
+  Future<bool> updateStoreAvatar(String? avatarPath) async {
+    if (_currentStore == null) return false;
+
+    final updatedStore = _currentStore!.copyWith(
+      avatar: avatarPath,
+      updatedAt: DateTime.now(),
+    );
+
+    return await updateStore(updatedStore);
+  }
+
+  /// Update store cover
+  Future<bool> updateStoreCover(String? coverPath) async {
+    if (_currentStore == null) return false;
+
+    final updatedStore = _currentStore!.copyWith(
+      cover: coverPath,
+      updatedAt: DateTime.now(),
+    );
+
+    return await updateStore(updatedStore);
+  }
+
   /// Delete a store
   Future<bool> deleteStore(String storeId) async {
     _setLoading(true);

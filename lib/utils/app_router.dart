@@ -21,6 +21,7 @@ import '../screens/settings_screen.dart';
 import '../screens/staff/staff_list_screen.dart';
 import '../screens/staff/staff_visit_history_screen.dart';
 import '../screens/services/service_list_screen.dart';
+import '../screens/store/store_profile_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -145,6 +146,13 @@ class AppRouter {
             path: '/settings',
             name: 'settings',
             builder: (context, state) => const SettingsScreen(),
+          ),
+
+          // Store profile screen (with bottom navigation)
+          GoRoute(
+            path: '/store/profile',
+            name: 'store_profile',
+            builder: (context, state) => const StoreProfileScreen(),
           ),
         ],
       ),

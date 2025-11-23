@@ -18,40 +18,30 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   PackageInfo? _packageInfo;
-  bool _useSalonWatermark = false;
   ImageQuality _selectedImageQuality = ImageQuality.hd;
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
-    _loadWatermarkSetting();
     _loadImageQualitySetting();
-    // Initialize stores provider after the build phase
+    // Initialize language provider after the build phase
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeStoresProvider();
+      _initializeLanguageProvider();
     });
   }
 
-  Future<void> _initializeStoresProvider() async {
+  Future<void> _initializeLanguageProvider() async {
     if (!mounted) return;
 
     try {
-      // Initialize stores provider if not already done
-      final storesProvider = context.read<StoresProvider>();
-      if (!storesProvider.hasStores && !storesProvider.isLoading) {
-        await storesProvider.initialize();
-      }
-    } catch (e) {
-      debugPrint('Failed to initialize stores provider: $e');
-    }
-
-    // Initialize language provider
-    if (mounted) {
+      // Initialize language provider
       final languageProvider = context.read<LanguageProvider>();
       if (!languageProvider.isLoading) {
         await languageProvider.initialize();
       }
+    } catch (e) {
+      debugPrint('Failed to initialize language provider: $e');
     }
   }
 
@@ -61,8 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _packageInfo = info;
     });
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -80,90 +68,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               // Account section
               _buildSectionHeader(context, l10n.account),
-              if (authProvider.userProfile != null) ...[
-                _buildAccountTile(
+              if (authProvider.userProfile != null)
+                _buildInfoTile(
                   context,
                   icon: Icons.email_outlined,
                   title: l10n.email,
                   subtitle: authProvider.userProfile!.email,
-                  onTap: () => _showEditEmailDialog(context),
                 ),
-                if (authProvider.userProfile!.fullName != null)
-                  _buildAccountTile(
-                    context,
-                    icon: Icons.person_outline,
-                    title: l10n.fullName,
-                    subtitle: authProvider.userProfile!.fullName!,
-                    onTap: () => _showEditNameDialog(context),
-                  ),
-              ],
-
-              // Store Information section
-              _buildSectionHeader(context, l10n.storeInformation),
-              Consumer<StoresProvider>(
-                builder: (context, storesProvider, child) {
-                  final currentStore = storesProvider.currentStore;
-
-                  if (storesProvider.isLoading) {
-                    return const Padding(
-                      padding: EdgeInsets.all(AppTheme.spacingMedium),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-
-                  if (currentStore == null) {
-                    return Padding(
-                      padding: const EdgeInsets.all(AppTheme.spacingMedium),
-                      child: Text(
-                        'No store information available',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.mutedTextColor,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      _buildAccountTile(
-                        context,
-                        icon: Icons.store_outlined,
-                        title: l10n.storeName,
-                        subtitle: currentStore.name.isNotEmpty
-                          ? currentStore.name
-                          : l10n.tapToAddStoreName,
-                        onTap: () => _showEditStoreNameDialog(context),
-                      ),
-                      _buildAccountTile(
-                        context,
-                        icon: Icons.phone_outlined,
-                        title: l10n.phone,
-                        subtitle: currentStore.phone.isNotEmpty
-                          ? currentStore.phone
-                          : l10n.tapToAddPhone,
-                        onTap: () => _showEditStorePhoneDialog(context),
-                      ),
-                      _buildAccountTile(
-                        context,
-                        icon: Icons.location_on_outlined,
-                        title: l10n.address,
-                        subtitle: currentStore.address.isNotEmpty
-                          ? currentStore.address
-                          : l10n.tapToAddAddress,
-                        onTap: () => _showEditStoreAddressDialog(context),
-                      ),
-
-                      // Watermark Settings
-                      const SizedBox(height: AppTheme.spacingSmall),
-                      _buildWatermarkToggle(context, l10n),
-
-                      // Image Quality Settings
-                      const SizedBox(height: AppTheme.spacingMedium),
-                      _buildImageQualitySection(context, l10n),
-                    ],
-                  );
-                },
-              ),
 
               // Language section
               _buildSectionHeader(context, l10n.language),
@@ -172,6 +83,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   return _buildLanguageSection(context, l10n, languageProvider);
                 },
               ),
+
+              // Image Quality section
+              _buildSectionHeader(context, l10n.imageQuality),
+              _buildImageQualitySection(context, l10n),
 
               // Subscription section (placeholder)
               _buildSectionHeader(context, l10n.subscription),
@@ -191,7 +106,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   );
                 },
               ),
-
 
               // About section
               _buildSectionHeader(context, l10n.about),
@@ -258,27 +172,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildAccountTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: AppTheme.secondaryTextColor),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: onTap != null
-          ? const Icon(
-              Icons.edit,
-              color: AppTheme.secondaryTextColor,
-              size: 20,
-            )
-          : null,
-      onTap: onTap,
-    );
-  }
 
   Widget _buildInfoTile(
     BuildContext context, {
@@ -324,207 +217,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showEditNameDialog(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit name feature coming soon')),
-    );
-  }
 
-  void _showEditEmailDialog(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit email feature coming soon')),
-    );
-  }
 
-  void _showEditStoreNameDialog(BuildContext context) {
-    final storesProvider = context.read<StoresProvider>();
-    final currentStore = storesProvider.currentStore;
-    final controller = TextEditingController(text: currentStore?.name ?? '');
-    final l10n = AppLocalizations.of(context)!;
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.editStoreName),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: l10n.storeName,
-            hintText: l10n.enterStoreName,
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                try {
-                  final success = await storesProvider.updateStoreName(newName);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    if (success) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(AppLocalizations.of(context)!.storeNameUpdated)),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(storesProvider.errorMessage ?? AppLocalizations.of(context)!.failedToUpdateStoreName)),
-                      );
-                    }
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(AppLocalizations.of(context)!.failedToUpdateStoreName)),
-                    );
-                  }
-                }
-              }
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditStorePhoneDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final storesProvider = context.read<StoresProvider>();
-    final currentStore = storesProvider.currentStore;
-    final controller = TextEditingController(text: currentStore?.phone ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.editPhoneNumber),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: l10n.phoneNumber,
-            hintText: 'Enter your phone number',
-          ),
-          keyboardType: TextInputType.phone,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newPhone = controller.text.trim();
-              try {
-                final success = await storesProvider.updateStorePhone(newPhone);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Phone number updated successfully')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(storesProvider.errorMessage ?? 'Failed to update phone number')),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update phone number: $e')),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showEditStoreAddressDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final storesProvider = context.read<StoresProvider>();
-    final currentStore = storesProvider.currentStore;
-    final controller = TextEditingController(text: currentStore?.address ?? '');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.editAddress),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            labelText: l10n.address,
-            hintText: 'Enter your store address',
-          ),
-          textCapitalization: TextCapitalization.words,
-          maxLines: 3,
-          minLines: 1,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () async {
-              final newAddress = controller.text.trim();
-              try {
-                final success = await storesProvider.updateStoreAddress(newAddress);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Address updated successfully')),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(storesProvider.errorMessage ?? 'Failed to update address')),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update address: $e')),
-                  );
-                }
-              }
-            },
-            child: Text(l10n.save),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Load watermark setting from SharedPreferences
-  Future<void> _loadWatermarkSetting() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (mounted) {
-      setState(() {
-        _useSalonWatermark = prefs.getBool('use_salon_watermark') ?? false;
-      });
-    }
-  }
-
-  // Save watermark setting to SharedPreferences
-  Future<void> _saveWatermarkSetting(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('use_salon_watermark', value);
-    if (mounted) {
-      setState(() {
-        _useSalonWatermark = value;
-      });
-    }
-  }
 
   // Load image quality setting from SharedPreferences
   Future<void> _loadImageQualitySetting() async {
@@ -548,48 +243,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // Build watermark toggle widget
-  Widget _buildWatermarkToggle(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: AppTheme.spacingMedium),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                Icons.branding_watermark,
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-            ),
-            title: Text(
-              l10n.useSalonWatermark,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            subtitle: Text(
-              l10n.useSalonWatermarkDescription,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.mutedTextColor,
-              ),
-            ),
-            trailing: Switch.adaptive(
-              value: _useSalonWatermark,
-              onChanged: (value) => _saveWatermarkSetting(value),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // Build image quality section widget
   Widget _buildImageQualitySection(BuildContext context, AppLocalizations l10n) {
@@ -821,5 +474,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
 }

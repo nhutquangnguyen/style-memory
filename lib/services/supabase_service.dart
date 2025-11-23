@@ -488,6 +488,9 @@ class SupabaseService {
       'name': store.name,
       'phone': store.phone,
       'address': store.address,
+      'slug': store.slug,
+      'avatar': store.avatar,
+      'cover': store.cover,
       'updated_at': now,
     };
 
