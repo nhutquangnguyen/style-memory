@@ -5,6 +5,7 @@ class Visit {
   final String id;
   final String clientId;
   final String userId;
+  final String storeId; // ID of the store where the visit occurred
   final String? staffId; // ID of the staff member who performed the service
   final DateTime visitDate;
   final String? serviceId;
@@ -17,10 +18,22 @@ class Visit {
   final DateTime updatedAt;
   final List<Photo>? photos;
 
+  // New fields added in migration 019
+  final String visitStatus; // 'scheduled', 'in_progress', 'completed', 'cancelled', 'no_show'
+  final int? durationMinutes;
+  final DateTime? appointmentTime;
+  final DateTime? actualStartTime;
+  final DateTime? actualEndTime;
+
+  // New fields added in migration 022 (soft delete)
+  final DateTime? deletedAt;
+  final String? deletedBy;
+
   Visit({
     required this.id,
     required this.clientId,
     required this.userId,
+    required this.storeId,
     this.staffId,
     required this.visitDate,
     this.serviceId,
@@ -32,13 +45,23 @@ class Visit {
     required this.createdAt,
     required this.updatedAt,
     this.photos,
-  });
+
+    // New fields
+    String? visitStatus, // Allow nullable in constructor
+    this.durationMinutes,
+    this.appointmentTime,
+    this.actualStartTime,
+    this.actualEndTime,
+    this.deletedAt,
+    this.deletedBy,
+  }) : visitStatus = visitStatus ?? 'completed';
 
   factory Visit.fromJson(Map<String, dynamic> json) {
     return Visit(
       id: json['id'] as String,
       clientId: json['client_id'] as String,
       userId: json['user_id'] as String,
+      storeId: json['store_id'] as String,
       staffId: json['staff_id'] as String?,
       visitDate: DateTime.parse(json['visit_date'] as String),
       serviceId: json['service_id'] as String?,
@@ -54,6 +77,23 @@ class Visit {
               .map((photo) => Photo.fromJson(photo))
               .toList()
           : null,
+
+      // New fields from migrations
+      visitStatus: (json['visit_status'] as String?) ?? 'completed',
+      durationMinutes: json['duration_minutes'] as int?,
+      appointmentTime: json['appointment_time'] != null
+          ? DateTime.parse(json['appointment_time'] as String)
+          : null,
+      actualStartTime: json['actual_start_time'] != null
+          ? DateTime.parse(json['actual_start_time'] as String)
+          : null,
+      actualEndTime: json['actual_end_time'] != null
+          ? DateTime.parse(json['actual_end_time'] as String)
+          : null,
+      deletedAt: json['deleted_at'] != null
+          ? DateTime.parse(json['deleted_at'] as String)
+          : null,
+      deletedBy: json['deleted_by'] as String?,
     );
   }
 
@@ -61,6 +101,7 @@ class Visit {
     final json = <String, dynamic>{
       'client_id': clientId,
       'user_id': userId,
+      'store_id': storeId,
       if (staffId != null) 'staff_id': staffId,
       'visit_date': visitDate.toIso8601String(),
       'service_id': serviceId,
@@ -70,6 +111,15 @@ class Visit {
       'products_used': productsUsed,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
+
+      // New fields
+      'visit_status': visitStatus,
+      if (durationMinutes != null) 'duration_minutes': durationMinutes,
+      if (appointmentTime != null) 'appointment_time': appointmentTime!.toIso8601String(),
+      if (actualStartTime != null) 'actual_start_time': actualStartTime!.toIso8601String(),
+      if (actualEndTime != null) 'actual_end_time': actualEndTime!.toIso8601String(),
+      if (deletedAt != null) 'deleted_at': deletedAt!.toIso8601String(),
+      if (deletedBy != null) 'deleted_by': deletedBy,
     };
 
     // Only include id if it's not empty (for updates)
@@ -84,6 +134,7 @@ class Visit {
     String? id,
     String? clientId,
     String? userId,
+    String? storeId,
     String? staffId,
     DateTime? visitDate,
     String? serviceId,
@@ -95,11 +146,21 @@ class Visit {
     DateTime? createdAt,
     DateTime? updatedAt,
     List<Photo>? photos,
+
+    // New fields
+    String? visitStatus,
+    int? durationMinutes,
+    DateTime? appointmentTime,
+    DateTime? actualStartTime,
+    DateTime? actualEndTime,
+    DateTime? deletedAt,
+    String? deletedBy,
   }) {
     return Visit(
       id: id ?? this.id,
       clientId: clientId ?? this.clientId,
       userId: userId ?? this.userId,
+      storeId: storeId ?? this.storeId,
       staffId: staffId ?? this.staffId,
       visitDate: visitDate ?? this.visitDate,
       serviceId: serviceId ?? this.serviceId,
@@ -111,6 +172,15 @@ class Visit {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       photos: photos ?? this.photos,
+
+      // New fields
+      visitStatus: visitStatus ?? this.visitStatus,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      appointmentTime: appointmentTime ?? this.appointmentTime,
+      actualStartTime: actualStartTime ?? this.actualStartTime,
+      actualEndTime: actualEndTime ?? this.actualEndTime,
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 

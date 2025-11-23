@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/models.dart';
 import 'wasabi_service.dart';
@@ -135,14 +134,21 @@ class SupabaseService {
   }
 
   // Client methods
-  static Future<List<Client>> getClients() async {
+  static Future<List<Client>> getClients({String? storeId}) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
-    final response = await _client
+    var query = _client
         .from('clients')
         .select()
         .eq('user_id', currentUser!.id)
-        .order('created_at', ascending: false);
+; // Temporarily removed soft delete filter to test
+
+    // If storeId is provided, filter by store
+    if (storeId != null) {
+      query = query.eq('store_id', storeId);
+    }
+
+    final response = await query.order('created_at', ascending: false);
 
     return response.map((client) => Client.fromJson(client)).toList();
   }
@@ -171,14 +177,21 @@ class SupabaseService {
   }
 
   // Service methods
-  static Future<List<Service>> getServices() async {
+  static Future<List<Service>> getServices({String? storeId}) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
-    final response = await _client
+    var query = _client
         .from('services')
         .select()
         .eq('user_id', currentUser!.id)
-        .order('name');
+; // Temporarily removed soft delete filter to test
+
+    // If storeId is provided, filter by store (assuming services will also have store_id)
+    if (storeId != null) {
+      query = query.eq('store_id', storeId);
+    }
+
+    final response = await query.order('name');
 
     return response.map((service) => Service.fromJson(service)).toList();
   }
@@ -207,14 +220,21 @@ class SupabaseService {
   }
 
   // Staff methods
-  static Future<List<Staff>> getStaff() async {
+  static Future<List<Staff>> getStaff({String? storeId}) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
-    final response = await _client
+    var query = _client
         .from('staff')
         .select()
         .eq('user_id', currentUser!.id)
-        .order('name');
+; // Temporarily removed soft delete filter to test
+
+    // If storeId is provided, filter by store
+    if (storeId != null) {
+      query = query.eq('store_id', storeId);
+    }
+
+    final response = await query.order('name');
 
     return response.map((staff) => Staff.fromJson(staff)).toList();
   }
@@ -243,64 +263,87 @@ class SupabaseService {
   }
 
   // Visit methods
-  static Future<List<Visit>> getVisitsForClient(String clientId) async {
+  static Future<List<Visit>> getVisitsForClient(String clientId, {String? storeId}) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
-    final response = await _client
+    var query = _client
         .from('visits')
         .select('''
           *,
-          photos (*),
-          services (
+          photos!fk_photos_visit_id (*),
+          services!fk_visits_service_id (
             id,
             name
           )
         ''')
         .eq('client_id', clientId)
-        .eq('user_id', currentUser!.id)
-        .order('visit_date', ascending: false);
+        .eq('user_id', currentUser!.id);
 
+    // If storeId is provided, filter by store
+    if (storeId != null) {
+      query = query.eq('store_id', storeId);
+    }
+
+    final response = await query.order('visit_date', ascending: false);
     return response.map((visit) => Visit.fromJson(visit)).toList();
   }
 
-  static Future<List<Visit>> getVisitsForStaff(String staffId) async {
+
+  static Future<List<Visit>> getVisitsForStaff(String staffId, {String? storeId}) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
-    final response = await _client
+    var query = _client
         .from('visits')
         .select('''
           *,
-          photos (*),
-          services (
+          photos!fk_photos_visit_id (*),
+          services!fk_visits_service_id (
             id,
             name
           )
         ''')
         .eq('staff_id', staffId)
-        .eq('user_id', currentUser!.id)
-        .order('visit_date', ascending: false);
+        .eq('user_id', currentUser!.id);
+
+    // If storeId is provided, filter by store
+    if (storeId != null) {
+      query = query.eq('store_id', storeId);
+    }
+
+    final response = await query.order('visit_date', ascending: false);
 
     return response.map((visit) => Visit.fromJson(visit)).toList();
   }
 
-  static Future<Visit> getVisit(String visitId) async {
-    if (!isAuthenticated) throw Exception('User not authenticated');
+  static Future<Visit?> getVisit(String visitId) async {
+    if (!isAuthenticated) {
+      throw Exception('User not authenticated');
+    }
 
-    final response = await _client
-        .from('visits')
-        .select('''
-          *,
-          photos (*),
-          services (
-            id,
-            name
-          )
-        ''')
-        .eq('id', visitId)
-        .eq('user_id', currentUser!.id)
-        .single();
+    try {
+      final response = await _client
+          .from('visits')
+          .select('''
+            *,
+            photos!fk_photos_visit_id (*),
+            services!fk_visits_service_id (
+              id,
+              name
+            )
+          ''')
+          .eq('id', visitId)
+          .eq('user_id', currentUser!.id)
+          .maybeSingle(); // Use maybeSingle to handle case where visit doesn't exist
 
-    return Visit.fromJson(response);
+      if (response == null) {
+        return null;
+      }
+
+      final visit = Visit.fromJson(response);
+      return visit;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   static Future<Visit> createVisit(Visit visit) async {
@@ -337,8 +380,8 @@ class SupabaseService {
         .from('visits')
         .select('''
           *,
-          photos (*),
-          services (id, name)
+          photos!fk_photos_visit_id (*),
+          services!fk_visits_service_id (id, name)
         ''')
         .eq('id', visitId)
         .single();
@@ -346,19 +389,36 @@ class SupabaseService {
     return Visit.fromJson(response);
   }
 
+  // Get all visits for a specific store
+  static Future<List<Visit>> getVisitsForStore(String storeId) async {
+    if (!isAuthenticated) throw Exception('User not authenticated');
+
+    final response = await _client
+        .from('visits')
+        .select('''
+          *,
+          photos!fk_photos_visit_id (*),
+          services!fk_visits_service_id (
+            id,
+            name
+          )
+        ''')
+        .eq('store_id', storeId)
+        .eq('user_id', currentUser!.id)
+        .order('visit_date', ascending: false);
+
+    return response.map((visit) => Visit.fromJson(visit)).toList();
+  }
+
   static Future<void> deleteVisit(String visitId) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
     try {
-      debugPrint('Starting visit deletion for visitId: $visitId');
-
       // Delete photos from storage first
       final photos = await _client
           .from('photos')
           .select('storage_path, id')
           .eq('visit_id', visitId);
-
-      debugPrint('Found ${photos.length} photos to delete');
 
       for (final photo in photos) {
         final storagePath = photo['storage_path'] as String;
@@ -370,43 +430,35 @@ class SupabaseService {
           final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
           try {
             await WasabiService.deletePhoto('https://s3.ap-southeast-1.wasabisys.com/style-memory-photos/$objectName');
-            debugPrint('Deleted Wasabi photo: $objectName');
           } catch (e) {
-            debugPrint('Failed to delete Wasabi photo $objectName: $e');
+            // Continue with other photos even if one fails
           }
         } else if (storagePath.startsWith('https://') && storagePath.contains('wasabi')) {
           // Full Wasabi URL
           try {
             await WasabiService.deletePhoto(storagePath);
-            debugPrint('Deleted Wasabi photo: $storagePath');
           } catch (e) {
-            debugPrint('Failed to delete Wasabi photo $storagePath: $e');
+            // Continue with other photos even if one fails
           }
         } else {
-          // Unrecognized path format - log warning
-          debugPrint('Warning: Cannot delete photo with unrecognized storage path: $storagePath');
+          // Unrecognized path format - skip this photo
         }
 
         // Delete photo record from database
         try {
           await _client.from('photos').delete().eq('id', photoId);
-          debugPrint('Deleted photo record: $photoId');
         } catch (e) {
-          debugPrint('Failed to delete photo record $photoId: $e');
+          // Continue even if photo record deletion fails
         }
       }
 
       // Now delete the visit record
-      debugPrint('Deleting visit record: $visitId');
       await _client
           .from('visits')
           .delete()
           .eq('id', visitId)
           .eq('user_id', currentUser!.id); // Add user_id constraint for RLS
-
-      debugPrint('Visit deletion completed successfully');
     } catch (e) {
-      debugPrint('Error in deleteVisit: $e');
       rethrow;
     }
   }

@@ -132,6 +132,7 @@ class VisitsProvider extends ChangeNotifier {
 
   Future<bool> createVisitWithPhotos({
     required String clientId,
+    required String storeId,
     required Map<PhotoType, Uint8List> photos,
     String? serviceId,
     String? notes,
@@ -157,6 +158,7 @@ class VisitsProvider extends ChangeNotifier {
         id: visitId,
         clientId: clientId,
         userId: userId,
+        storeId: storeId,
         visitDate: visitDate ?? DateTime.now(),
         serviceId: serviceId?.trim(),
         notes: notes?.trim(),
@@ -305,15 +307,11 @@ class VisitsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('VisitsProvider: Starting visit deletion for $visitId');
       await SupabaseService.deleteVisit(visitId);
 
       // Remove from local list
       if (_visitsByClient.containsKey(clientId)) {
-        final removedCount = _visitsByClient[clientId]!.length;
         _visitsByClient[clientId]!.removeWhere((v) => v.id == visitId);
-        final newCount = _visitsByClient[clientId]!.length;
-        debugPrint('Removed visit from local cache. Before: $removedCount, After: $newCount');
 
         // Update cache timestamp since we removed a visit
         _lastLoadTimes[clientId] = DateTime.now();
@@ -321,13 +319,11 @@ class VisitsProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
-      debugPrint('VisitsProvider: Visit deletion completed successfully');
       return true;
     } catch (e) {
       _errorMessage = 'Failed to delete visit: $e';
       _isLoading = false;
       notifyListeners();
-      debugPrint('VisitsProvider: Visit deletion failed: $e');
       return false;
     }
   }
@@ -353,7 +349,6 @@ class VisitsProvider extends ChangeNotifier {
       }
 
       // If we reach here, it's an unrecognized storage path format
-      debugPrint('Warning: Unrecognized storage path format: $storagePath');
       return null;
     } catch (e) {
       _errorMessage = 'Failed to get photo URL: $e';
