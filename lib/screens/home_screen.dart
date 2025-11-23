@@ -152,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return ModernCard(
       padding: EdgeInsets.zero,
       onTap: () {
-        context.go('/store/profile');
+        context.push('/store/profile');
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 l10n.manageTeamMembers,
                 Icons.people_alt_rounded,
                 AppTheme.primaryColor,
-                () => context.goNamed('staff_list'),
+                () => context.pushNamed('staff_list'),
               ),
             ),
             const SizedBox(width: AppTheme.spacingMedium),
@@ -433,7 +433,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 l10n.manageServices,
                 Icons.content_cut_rounded,
                 Colors.purple,
-                () => context.goNamed('services'),
+                () => context.pushNamed('services'),
               ),
             ),
           ],
@@ -447,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
           l10n.appSettingsAndConfiguration,
           Icons.settings_rounded,
           Colors.grey[600]!,
-          () => context.goNamed('settings'),
+          () => context.pushNamed('settings'),
           fullWidth: true,
         ),
       ],

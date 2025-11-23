@@ -11,19 +11,19 @@ import '../../widgets/common/empty_state.dart';
 import '../../widgets/visits/visit_card.dart';
 import '../../l10n/app_localizations.dart';
 
-class StaffVisitHistoryScreen extends StatefulWidget {
-  final String staffId;
+class ServiceVisitHistoryScreen extends StatefulWidget {
+  final String serviceId;
 
-  const StaffVisitHistoryScreen({
+  const ServiceVisitHistoryScreen({
     super.key,
-    required this.staffId,
+    required this.serviceId,
   });
 
   @override
-  State<StaffVisitHistoryScreen> createState() => _StaffVisitHistoryScreenState();
+  State<ServiceVisitHistoryScreen> createState() => _ServiceVisitHistoryScreenState();
 }
 
-class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
+class _ServiceVisitHistoryScreenState extends State<ServiceVisitHistoryScreen> {
   List<Visit> _visits = [];
   Map<String, Client> _clients = {}; // Cache clients for display
   bool _isLoading = false;
@@ -33,11 +33,11 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadStaffVisits();
+      _loadServiceVisits();
     });
   }
 
-  Future<void> _loadStaffVisits() async {
+  Future<void> _loadServiceVisits() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -47,8 +47,8 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
       final visitsProvider = context.read<VisitsProvider>();
       final clientsProvider = context.read<ClientsProvider>();
 
-      // Load all visits for this staff member
-      final allVisits = await visitsProvider.getVisitsForStaff(widget.staffId);
+      // Load all visits for this service
+      final allVisits = await visitsProvider.getVisitsForService(widget.serviceId);
 
       // Load clients data for the visits
       final clientIds = allVisits.map((v) => v.clientId).toSet();
@@ -75,22 +75,22 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
   }
 
   Future<void> _refresh() async {
-    await _loadStaffVisits();
+    await _loadServiceVisits();
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final staffProvider = context.watch<StaffProvider>();
-    final staff = staffProvider.getStaffById(widget.staffId);
+    final serviceProvider = context.watch<ServiceProvider>();
+    final service = serviceProvider.getServiceById(widget.serviceId);
 
-    if (staff == null) {
+    if (service == null) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Staff Not Found'),
+          title: Text('Service Not Found'),
         ),
         body: const Center(
-          child: Text('Staff member not found'),
+          child: Text('Service not found'),
         ),
       );
     }
@@ -104,8 +104,8 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
         ),
         body: Column(
           children: [
-            // Staff info header
-            _buildStaffHeader(staff),
+            // Service info header
+            _buildServiceHeader(service),
 
             // Error banner
             if (_errorMessage != null) ...[
@@ -127,7 +127,7 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
     );
   }
 
-  Widget _buildStaffHeader(Staff staff) {
+  Widget _buildServiceHeader(Service service) {
     return Container(
       padding: const EdgeInsets.all(AppTheme.spacingMedium),
       margin: const EdgeInsets.all(AppTheme.spacingMedium),
@@ -141,7 +141,7 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
       ),
       child: Row(
         children: [
-          // Staff avatar
+          // Service icon
           Container(
             width: 60,
             height: 60,
@@ -151,49 +151,62 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  AppTheme.primaryColor,
-                  AppTheme.primaryColor.withValues(alpha: 0.8),
+                  AppTheme.secondaryColor,
+                  AppTheme.secondaryColor.withValues(alpha: 0.8),
                 ],
               ),
             ),
-            child: Center(
-              child: Text(
-                staff.initials,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
+            child: const Center(
+              child: Icon(
+                Icons.design_services_rounded,
+                color: Colors.white,
+                size: 28,
               ),
             ),
           ),
           const SizedBox(width: AppTheme.spacingMedium),
 
-          // Staff details
+          // Service details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  staff.name,
+                  service.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (staff.specialty != null) ...[
-                  const SizedBox(height: AppTheme.spacingXs),
-                  Text(
-                    staff.specialty!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.secondaryTextColor,
-                    ),
-                  ),
-                ],
                 const SizedBox(height: AppTheme.spacingXs),
                 Text(
-                  'Joined ${staff.formattedHireDate}',
+                  'Created ${_formatDate(service.createdAt)}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppTheme.mutedTextColor,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingXs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.spacingSmall,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: service.isActive
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.borderRadiusSmall),
+                    border: Border.all(
+                      color: service.isActive
+                          ? Colors.green.withValues(alpha: 0.3)
+                          : Colors.grey.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    service.isActive ? 'Active' : 'Inactive',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: service.isActive ? Colors.green[700] : Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -207,10 +220,10 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
               vertical: AppTheme.spacingSmall,
             ),
             decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+              color: AppTheme.secondaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(AppTheme.borderRadiusLarge),
               border: Border.all(
-                color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                color: AppTheme.secondaryColor.withValues(alpha: 0.2),
               ),
             ),
             child: Column(
@@ -218,14 +231,14 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
                 Text(
                   '${_visits.length}',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: AppTheme.secondaryColor,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   _visits.length == 1 ? 'Visit' : 'Visits',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.primaryColor,
+                    color: AppTheme.secondaryColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -243,15 +256,15 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
   Widget _buildVisitsList(AppLocalizations l10n) {
     if (_visits.isEmpty && !_isLoading) {
       return EmptyState(
-        icon: Icons.event_busy_rounded,
+        icon: Icons.design_services_outlined,
         title: 'No Visits Yet',
-        description: 'This staff member hasn\'t been assigned to any visits.',
+        description: 'This service hasn\'t been used in any visits yet.',
       );
     }
 
     return RefreshIndicator(
       onRefresh: _refresh,
-      color: AppTheme.primaryColor,
+      color: AppTheme.secondaryColor,
       backgroundColor: AppTheme.surfaceColor,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(
@@ -276,5 +289,24 @@ class _StaffVisitHistoryScreenState extends State<StaffVisitHistoryScreen> {
         },
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays == 0) {
+      return 'today';
+    } else if (difference.inDays == 1) {
+      return 'yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    } else if (difference.inDays < 365) {
+      return '${(difference.inDays / 30).floor()} months ago';
+    } else {
+      return '${(difference.inDays / 365).floor()} years ago';
+    }
   }
 }

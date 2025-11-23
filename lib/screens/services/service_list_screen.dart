@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/models.dart';
@@ -187,7 +188,10 @@ class _ServiceListScreenState extends State<ServiceListScreen> {
   }
 
   void _showServiceDetails(BuildContext context, Service service) {
-    // TODO: Navigate to service details screen
+    context.pushNamed(
+      'service_visit_history',
+      pathParameters: {'serviceId': service.id},
+    );
   }
 
   void _confirmDeleteService(BuildContext context, Service service) {

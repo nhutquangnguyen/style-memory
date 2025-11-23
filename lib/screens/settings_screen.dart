@@ -61,7 +61,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n.settings),
-            automaticallyImplyLeading: false,
           ),
           body: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppTheme.spacingMedium),

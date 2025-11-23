@@ -140,7 +140,7 @@ class _StaffListScreenState extends State<StaffListScreen> {
 
   void _showStaffDetails(BuildContext context, Staff staff) {
     // Navigate to staff visit history screen
-    context.goNamed(
+    context.pushNamed(
       'staff_visit_history',
       pathParameters: {'staffId': staff.id},
     );
@@ -472,6 +472,7 @@ class _AddEditStaffDialogState extends State<_AddEditStaffDialog> {
           )
         : Staff(
             userId: '', // Will be set by provider
+            storeId: context.read<StoresProvider>().currentStore?.id ?? '', // Use current store
             name: _nameController.text.trim(),
             email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
             phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
