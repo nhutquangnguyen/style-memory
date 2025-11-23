@@ -7,6 +7,10 @@ class AvatarService {
   static const int avatarSize = 200; // Square avatar size
   static const int avatarQuality = 85; // Avatar compression quality
 
+  // Cache for presigned URLs to prevent regeneration on widget rebuilds
+  static final Map<String, _CachedUrl> _urlCache = {};
+  static const Duration _cacheExpiry = Duration(hours: 20); // Cache for 20 hours (less than 24hr presigned URL expiry)
+
   /// Pick an avatar image from gallery or camera
   static Future<XFile?> pickAvatarImage({
     required bool fromCamera,
@@ -76,12 +80,20 @@ class AvatarService {
     }
   }
 
-  /// Get presigned URL for avatar display
+  /// Get presigned URL for avatar display with caching
   static Future<String?> getAvatarUrl(String avatarPath) async {
     try {
+      // Check cache first
+      final cached = _urlCache[avatarPath];
+      if (cached != null && !cached.isExpired) {
+        return cached.url;
+      }
+
+      String? presignedUrl;
+
       if (avatarPath.startsWith('wasabi:')) {
         final objectName = avatarPath.substring(7); // Remove 'wasabi:' prefix
-        return await WasabiService.getPresignedUrl(
+        presignedUrl = await WasabiService.getPresignedUrl(
           objectName,
           expiry: const Duration(hours: 24), // Longer expiry for avatars
         );
@@ -91,16 +103,44 @@ class AvatarService {
         final pathSegments = uri.pathSegments;
         if (pathSegments.length >= 2) {
           final objectName = pathSegments.skip(1).join('/'); // Skip bucket name
-          return await WasabiService.getPresignedUrl(
+          presignedUrl = await WasabiService.getPresignedUrl(
             objectName,
             expiry: const Duration(hours: 24),
           );
         }
       }
 
-      return null;
+      // Cache the result if we got a URL
+      if (presignedUrl != null) {
+        _urlCache[avatarPath] = _CachedUrl(presignedUrl, DateTime.now());
+
+        // Clean up expired cache entries periodically
+        _cleanExpiredCache();
+      }
+
+      return presignedUrl;
     } catch (e) {
       return null;
     }
   }
+
+  /// Clean up expired cache entries
+  static void _cleanExpiredCache() {
+    _urlCache.removeWhere((key, cached) => cached.isExpired);
+  }
+
+  /// Clear all cached URLs (useful for testing or when avatar is updated)
+  static void clearCache() {
+    _urlCache.clear();
+  }
+}
+
+/// Helper class for caching presigned URLs
+class _CachedUrl {
+  final String url;
+  final DateTime createdAt;
+
+  _CachedUrl(this.url, this.createdAt);
+
+  bool get isExpired => DateTime.now().difference(createdAt) > AvatarService._cacheExpiry;
 }

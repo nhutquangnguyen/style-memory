@@ -19,15 +19,15 @@ class WatermarkService {
         throw Exception('Failed to decode image');
       }
 
-      // Calculate font size as percentage of image height for consistent visual height
-      final imageHeight = originalImage.height;
-      final responsiveFontSize = (imageHeight * 0.06).round().clamp(12, 80);
+      // Calculate font size as percentage of image width for consistent screen appearance
+      // This ensures watermark looks the same size when viewed on phone screens regardless of image resolution
+      final fontSizeByWidth = (originalImage.width * 0.04).round();
 
       // Draw watermark text directly on the original image (no compositing needed)
       _drawWatermarkDirectly(
         originalImage,
         watermarkText,
-        responsiveFontSize,
+        fontSizeByWidth,
         textColor,
         opacity,
         position,
@@ -53,51 +53,86 @@ class WatermarkService {
     double opacity,
     WatermarkPosition position,
   ) {
+    // Calculate scaling factor based on desired fontSize vs arial24 base size
+    const baseFontSize = 24; // img.arial24 is 24px
+    final scaleFactor = fontSize / baseFontSize;
+
     // Handle multi-line text (for salon info)
     final lines = text.split('\n');
-    final lineHeight = (fontSize * 1.1).round();
-    final maxLineWidth = lines.map((line) => (line.length * fontSize * 0.6).round()).reduce((a, b) => a > b ? a : b);
+    final baseLineHeight = (baseFontSize * 1.1).round();
+    final baseCharWidth = (baseFontSize * 0.6).round();
+    final baseMaxLineWidth = lines.map((line) => line.length * baseCharWidth).reduce((a, b) => a > b ? a : b);
 
-    // Calculate total dimensions for multi-line text
-    final totalWidth = maxLineWidth;
-    final totalHeight = lines.length * lineHeight;
+    // Calculate dimensions at base size
+    final baseWidth = baseMaxLineWidth;
+    final baseHeight = lines.length * baseLineHeight;
 
-    // Calculate position for watermark
-    final (baseX, baseY) = _calculateWatermarkPosition(
-      position,
-      originalImage.width,
-      originalImage.height,
-      totalWidth,
-      totalHeight,
+    // Create a temporary canvas for the watermark at base size with proper transparency
+    final watermarkCanvas = img.Image(
+      width: baseWidth + 10, // Add padding
+      height: baseHeight + 10,
+      numChannels: 4, // RGBA for transparency support
     );
 
-    // Draw each line
+    // Fill with transparent pixels
+    img.fill(watermarkCanvas, color: img.ColorRgba8(0, 0, 0, 0));
+
+    // Draw text on the temporary canvas at base size
     for (int i = 0; i < lines.length; i++) {
       final line = lines[i].trim();
       if (line.isEmpty) continue;
 
-      final y = baseY + (i * lineHeight);
+      final y = 5 + (i * baseLineHeight); // 5px padding
 
-      // Draw shadow for each line
+      // Draw shadow
       img.drawString(
-        originalImage,
+        watermarkCanvas,
         line,
         font: img.arial24,
-        x: baseX + 2,
+        x: 7, // 5px padding + 2px shadow offset
         y: y + 2,
-        color: img.ColorRgba8(0, 0, 0, (120 * opacity).round()), // More visible shadow
+        color: img.ColorRgba8(0, 0, 0, (120 * opacity).round()),
       );
 
-      // Draw main text for each line
+      // Draw main text
       img.drawString(
-        originalImage,
+        watermarkCanvas,
         line,
         font: img.arial24,
-        x: baseX,
+        x: 5, // 5px padding
         y: y,
-        color: img.ColorRgba8(255, 255, 255, (255 * opacity).round()), // Bold white text
+        color: img.ColorRgba8(255, 255, 255, (255 * opacity).round()),
       );
     }
+
+    // Scale the watermark canvas if needed while preserving transparency
+    final scaledWatermark = scaleFactor != 1.0
+        ? img.copyResize(
+            watermarkCanvas,
+            width: (watermarkCanvas.width * scaleFactor).round(),
+            height: (watermarkCanvas.height * scaleFactor).round(),
+            interpolation: img.Interpolation.linear,
+            backgroundColor: img.ColorRgba8(0, 0, 0, 0), // Keep transparent background
+          )
+        : watermarkCanvas;
+
+    // Calculate position for scaled watermark
+    final (baseX, baseY) = _calculateWatermarkPosition(
+      position,
+      originalImage.width,
+      originalImage.height,
+      scaledWatermark.width,
+      scaledWatermark.height,
+    );
+
+    // Composite the scaled watermark onto the original image with proper transparency
+    img.compositeImage(
+      originalImage,
+      scaledWatermark,
+      dstX: baseX,
+      dstY: baseY,
+      blend: img.BlendMode.alpha, // Use alpha blending for transparency
+    );
   }
 
   /// Calculate watermark position based on the specified position

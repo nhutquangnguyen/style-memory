@@ -4,7 +4,7 @@ import '../../services/avatar_service.dart';
 import '../../theme/app_theme.dart';
 import '../common/cached_image.dart';
 
-class ClientAvatar extends StatelessWidget {
+class ClientAvatar extends StatefulWidget {
   final Client client;
   final double size;
   final bool showBorder;
@@ -16,15 +16,45 @@ class ClientAvatar extends StatelessWidget {
     this.size = 40,
     this.showBorder = false,
     this.onTap,
-  });
+  }) : assert(size > 0, 'Avatar size must be positive');
+
+  @override
+  State<ClientAvatar> createState() => _ClientAvatarState();
+}
+
+class _ClientAvatarState extends State<ClientAvatar> {
+  Future<String?>? _avatarUrlFuture;
+  String? _cachedAvatarPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAvatarUrl();
+  }
+
+  @override
+  void didUpdateWidget(ClientAvatar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only reload if the avatar path changed
+    if (oldWidget.client.avatarUrl != widget.client.avatarUrl) {
+      _initializeAvatarUrl();
+    }
+  }
+
+  void _initializeAvatarUrl() {
+    if (widget.client.avatarUrl != null && widget.client.avatarUrl != _cachedAvatarPath) {
+      _cachedAvatarPath = widget.client.avatarUrl;
+      _avatarUrlFuture = AvatarService.getAvatarUrl(widget.client.avatarUrl!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final avatar = _buildAvatar();
 
-    if (onTap != null) {
+    if (widget.onTap != null) {
       return GestureDetector(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: avatar,
       );
     }
@@ -34,11 +64,11 @@ class ClientAvatar extends StatelessWidget {
 
   Widget _buildAvatar() {
     final container = Container(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: showBorder
+        border: widget.showBorder
             ? Border.all(
                 color: AppTheme.primaryColor,
                 width: 2.0,
@@ -47,9 +77,9 @@ class ClientAvatar extends StatelessWidget {
         color: AppTheme.primaryColor.withValues(alpha: 0.1),
       ),
       child: ClipOval(
-        child: client.avatarUrl != null
+        child: widget.client.avatarUrl != null && _avatarUrlFuture != null
             ? FutureBuilder<String?>(
-                future: AvatarService.getAvatarUrl(client.avatarUrl!),
+                future: _avatarUrlFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return _buildLoadingAvatar();
@@ -59,8 +89,8 @@ class ClientAvatar extends StatelessWidget {
                     return CachedImage(
                       imageUrl: snapshot.data!,
                       fit: BoxFit.cover,
-                      width: size,
-                      height: size,
+                      width: widget.size,
+                      height: widget.size,
                       placeholder: _buildLoadingAvatar(),
                       errorWidget: _buildInitialsAvatar(),
                     );
@@ -78,8 +108,8 @@ class ClientAvatar extends StatelessWidget {
 
   Widget _buildInitialsAvatar() {
     return Container(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -93,10 +123,10 @@ class ClientAvatar extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          client.initials,
+          widget.client.initials,
           style: TextStyle(
             color: Colors.white,
-            fontSize: size * 0.4, // Scale font size with avatar size
+            fontSize: widget.size * 0.4, // Scale font size with avatar size
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -106,16 +136,16 @@ class ClientAvatar extends StatelessWidget {
 
   Widget _buildLoadingAvatar() {
     return Container(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         color: AppTheme.borderLightColor,
       ),
       child: Center(
         child: SizedBox(
-          width: size * 0.4,
-          height: size * 0.4,
+          width: widget.size * 0.4,
+          height: widget.size * 0.4,
           child: const CircularProgressIndicator(
             strokeWidth: 2,
             color: AppTheme.primaryColor,
