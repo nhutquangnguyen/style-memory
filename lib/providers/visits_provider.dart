@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
@@ -306,22 +305,29 @@ class VisitsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      debugPrint('VisitsProvider: Starting visit deletion for $visitId');
       await SupabaseService.deleteVisit(visitId);
 
       // Remove from local list
       if (_visitsByClient.containsKey(clientId)) {
+        final removedCount = _visitsByClient[clientId]!.length;
         _visitsByClient[clientId]!.removeWhere((v) => v.id == visitId);
+        final newCount = _visitsByClient[clientId]!.length;
+        debugPrint('Removed visit from local cache. Before: $removedCount, After: $newCount');
+
         // Update cache timestamp since we removed a visit
         _lastLoadTimes[clientId] = DateTime.now();
       }
 
       _isLoading = false;
       notifyListeners();
+      debugPrint('VisitsProvider: Visit deletion completed successfully');
       return true;
     } catch (e) {
       _errorMessage = 'Failed to delete visit: $e';
       _isLoading = false;
       notifyListeners();
+      debugPrint('VisitsProvider: Visit deletion failed: $e');
       return false;
     }
   }
@@ -335,21 +341,20 @@ class VisitsProvider extends ChangeNotifier {
         return presignedUrl;
       }
 
-      // For legacy Wasabi URLs (full URLs from previous uploads)
+      // For Wasabi URLs (full URLs from uploads)
       if (storagePath.startsWith('https://s3.') && storagePath.contains('wasabisys.com')) {
-        // Extract object name from full URL and generate presigned URL
-        final uri = Uri.parse(storagePath);
-        final pathSegments = uri.pathSegments;
-        if (pathSegments.length >= 2) {
-          final objectName = pathSegments.skip(1).join('/'); // Skip bucket name
-          final presignedUrl = await WasabiService.getPresignedUrl(objectName, expiry: const Duration(hours: 1));
-          return presignedUrl;
-        }
+        // Already a full Wasabi URL, return as-is (these are public URLs)
+        return storagePath;
       }
 
-      // Fallback for old Supabase storage paths
-      final supabaseUrl = await SupabaseService.getPhotoUrl(storagePath);
-      return supabaseUrl;
+      // For full Wasabi URLs that may not match the exact pattern above
+      if (storagePath.startsWith('https://') && storagePath.contains('wasabi')) {
+        return storagePath;
+      }
+
+      // If we reach here, it's an unrecognized storage path format
+      debugPrint('Warning: Unrecognized storage path format: $storagePath');
+      return null;
     } catch (e) {
       _errorMessage = 'Failed to get photo URL: $e';
       notifyListeners();

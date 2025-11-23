@@ -181,6 +181,50 @@ class WasabiService {
     }
   }
 
+  /// Upload multiple photo variants at once
+  static Future<Map<String, String>> uploadPhotoVariants({
+    required Map<String, Uint8List> variantData, // Map of variant name -> image data
+    required String userId,
+    required String visitId,
+    required String photoType,
+  }) async {
+    await _ensureBucket();
+
+    final uploadedVariants = <String, String>{};
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    // Upload each variant
+    for (final entry in variantData.entries) {
+      final variantName = entry.key;
+      final imageData = entry.value;
+
+      try {
+        final fileName = 'photos/$userId/$visitId/${photoType}_${variantName}_$timestamp.jpg';
+
+        await _minio.putObject(
+          _bucketName,
+          fileName,
+          Stream.fromIterable([imageData]),
+          size: imageData.length,
+          metadata: {
+            'Content-Type': 'image/jpeg',
+          },
+        );
+
+        final publicUrl = '$_endpoint/$_bucketName/$fileName';
+        uploadedVariants[variantName] = publicUrl;
+
+        debugPrint('Uploaded variant $variantName: $publicUrl');
+      } catch (e) {
+        // If upload fails for a variant, log and continue with others
+        debugPrint('Failed to upload variant $variantName: $e');
+        // Don't add to uploadedVariants if upload failed
+      }
+    }
+
+    return uploadedVariants;
+  }
+
   // Delete photo by URL
   static Future<bool> deletePhoto(String photoUrl) async {
     try {

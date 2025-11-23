@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -36,17 +35,7 @@ void main() async {
   // Initialize image cache service
   await ImageCacheService.initialize();
 
-  // Start periodic URL cache cleanup (every 30 minutes)
-  _startUrlCacheCleanup();
-
   runApp(const StyleMemoryApp());
-}
-
-// Start periodic URL cache cleanup to prevent memory leaks
-void _startUrlCacheCleanup() {
-  Timer.periodic(const Duration(minutes: 30), (timer) {
-    SupabaseService.cleanupUrlCache();
-  });
 }
 
 class StyleMemoryApp extends StatelessWidget {

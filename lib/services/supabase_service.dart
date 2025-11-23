@@ -15,6 +15,9 @@ class SupabaseService {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
     );
     _client = Supabase.instance.client;
   }
@@ -344,60 +347,71 @@ class SupabaseService {
   }
 
   static Future<void> deleteVisit(String visitId) async {
-    // Delete photos from storage first
-    final photos = await _client
-        .from('photos')
-        .select('storage_path')
-        .eq('visit_id', visitId);
+    if (!isAuthenticated) throw Exception('User not authenticated');
 
-    for (final photo in photos) {
-      final storagePath = photo['storage_path'] as String;
+    try {
+      debugPrint('Starting visit deletion for visitId: $visitId');
 
-      // Handle Wasabi storage paths
-      if (storagePath.startsWith('wasabi:')) {
-        final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
-        try {
-          await WasabiService.deletePhoto('https://s3.ap-southeast-1.wasabisys.com/style-memory-photos/$objectName');
-        } catch (e) {
-          // Log error but continue with deletion
-          debugPrint('Failed to delete Wasabi photo $objectName: $e');
+      // Delete photos from storage first
+      final photos = await _client
+          .from('photos')
+          .select('storage_path, id')
+          .eq('visit_id', visitId);
+
+      debugPrint('Found ${photos.length} photos to delete');
+
+      for (final photo in photos) {
+        final storagePath = photo['storage_path'] as String;
+        final photoId = photo['id'] as String;
+
+        // Handle Wasabi storage paths (photos are now stored on Wasabi)
+        if (storagePath.startsWith('wasabi:')) {
+          // Prefixed Wasabi path
+          final objectName = storagePath.substring(7); // Remove 'wasabi:' prefix
+          try {
+            await WasabiService.deletePhoto('https://s3.ap-southeast-1.wasabisys.com/style-memory-photos/$objectName');
+            debugPrint('Deleted Wasabi photo: $objectName');
+          } catch (e) {
+            debugPrint('Failed to delete Wasabi photo $objectName: $e');
+          }
+        } else if (storagePath.startsWith('https://') && storagePath.contains('wasabi')) {
+          // Full Wasabi URL
+          try {
+            await WasabiService.deletePhoto(storagePath);
+            debugPrint('Deleted Wasabi photo: $storagePath');
+          } catch (e) {
+            debugPrint('Failed to delete Wasabi photo $storagePath: $e');
+          }
+        } else {
+          // Unrecognized path format - log warning
+          debugPrint('Warning: Cannot delete photo with unrecognized storage path: $storagePath');
         }
-      } else {
-        // Handle legacy Supabase storage paths
+
+        // Delete photo record from database
         try {
-          await _client.storage
-              .from('client-photos')
-              .remove([storagePath]);
+          await _client.from('photos').delete().eq('id', photoId);
+          debugPrint('Deleted photo record: $photoId');
         } catch (e) {
-          // Log error but continue with deletion
-          debugPrint('Failed to delete Supabase photo $storagePath: $e');
+          debugPrint('Failed to delete photo record $photoId: $e');
         }
       }
+
+      // Now delete the visit record
+      debugPrint('Deleting visit record: $visitId');
+      await _client
+          .from('visits')
+          .delete()
+          .eq('id', visitId)
+          .eq('user_id', currentUser!.id); // Add user_id constraint for RLS
+
+      debugPrint('Visit deletion completed successfully');
+    } catch (e) {
+      debugPrint('Error in deleteVisit: $e');
+      rethrow;
     }
-
-    // Delete visit (cascade will handle photos table)
-    await _client.from('visits').delete().eq('id', visitId);
   }
 
-  // Photo methods
-  static Future<String> uploadPhoto({
-    required Uint8List photoData,
-    required String userId,
-    required String visitId,
-    required PhotoType photoType,
-  }) async {
-    // Generate unique filename with timestamp to avoid duplicates
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final fileName = '${photoType.name}_$timestamp.jpg';
-    final path = '$userId/$visitId/$fileName';
-
-    await _client.storage
-        .from('client-photos')
-        .uploadBinary(path, photoData);
-
-    return path;
-  }
-
+  // Photo database methods (storage is handled by Wasabi)
   static Future<Photo> createPhoto(Photo photo) async {
     if (!isAuthenticated) throw Exception('User not authenticated');
 
@@ -408,54 +422,6 @@ class SupabaseService {
         .single();
 
     return Photo.fromJson(response);
-  }
-
-  // URL cache to prevent repeated network calls
-  static final Map<String, String> _urlCache = {};
-  static final Map<String, DateTime> _urlCacheExpiry = {};
-  static const Duration _urlCacheDuration = Duration(minutes: 50); // Cache for 50 minutes (shorter than 1-hour expiry)
-
-  static Future<String> getPhotoUrl(String storagePath) async {
-    // Check if we have a valid cached URL
-    final cachedUrl = _urlCache[storagePath];
-    final expiry = _urlCacheExpiry[storagePath];
-
-    if (cachedUrl != null && expiry != null && DateTime.now().isBefore(expiry)) {
-      return cachedUrl;
-    }
-
-    // Generate new signed URL
-    final url = await _client.storage
-        .from('client-photos')
-        .createSignedUrl(storagePath, 3600); // 1 hour expiry
-
-    // Cache the URL with expiry
-    _urlCache[storagePath] = url;
-    _urlCacheExpiry[storagePath] = DateTime.now().add(_urlCacheDuration);
-
-    return url;
-  }
-
-  // Clear expired URLs from cache (call this periodically)
-  static void cleanupUrlCache() {
-    final now = DateTime.now();
-    final expiredKeys = _urlCacheExpiry.entries
-        .where((entry) => now.isAfter(entry.value))
-        .map((entry) => entry.key)
-        .toList();
-
-    for (final key in expiredKeys) {
-      _urlCache.remove(key);
-      _urlCacheExpiry.remove(key);
-    }
-  }
-
-  static Future<void> deletePhoto(String photoId, String storagePath) async {
-    // Delete from storage
-    await _client.storage.from('client-photos').remove([storagePath]);
-
-    // Delete from database
-    await _client.from('photos').delete().eq('id', photoId);
   }
 
   /// Delete only the photo record from database (for Wasabi integration)

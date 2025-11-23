@@ -12,12 +12,13 @@ enum AuthState {
   unauthenticated,
 }
 
-class AuthProvider extends ChangeNotifier {
+class AuthProvider extends ChangeNotifier with WidgetsBindingObserver {
   AuthState _state = AuthState.initial;
   UserProfile? _userProfile;
   String? _errorMessage;
   StreamSubscription<supabase.AuthState>? _authSubscription;
   bool _disposed = false;
+  DateTime? _lastActiveTime;
 
   AuthState get state => _state;
   UserProfile? get userProfile => _userProfile;
@@ -27,6 +28,7 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider() {
     _initialize();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   void _initialize() {
@@ -36,6 +38,9 @@ class AuthProvider extends ChangeNotifier {
         _handleSignedIn();
       } else if (authState.event == supabase.AuthChangeEvent.signedOut) {
         _handleSignedOut();
+      } else if (authState.event == supabase.AuthChangeEvent.tokenRefreshed) {
+        // Session refreshed successfully - keep user logged in
+        debugPrint('Auth token refreshed successfully');
       }
     });
 
@@ -212,8 +217,52 @@ class AuthProvider extends ChangeNotifier {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // App came to foreground
+        _handleAppResumed();
+        break;
+      case AppLifecycleState.paused:
+        // App went to background
+        _lastActiveTime = DateTime.now();
+        break;
+      case AppLifecycleState.detached:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+        break;
+    }
+  }
+
+  void _handleAppResumed() {
+    // If user is authenticated, check if session is still valid
+    if (_state == AuthState.authenticated && _lastActiveTime != null) {
+      final inactiveTime = DateTime.now().difference(_lastActiveTime!);
+
+      // If app was inactive for more than 30 minutes, refresh session
+      if (inactiveTime.inMinutes > 30) {
+        debugPrint('App resumed after ${inactiveTime.inMinutes} minutes, refreshing session...');
+        _refreshSession();
+      }
+    }
+  }
+
+  Future<void> _refreshSession() async {
+    try {
+      await SupabaseService.client.auth.refreshSession();
+      debugPrint('Session refreshed successfully');
+    } catch (e) {
+      debugPrint('Failed to refresh session: $e');
+      // If refresh fails, the user will be signed out automatically
+    }
+  }
+
+  @override
   void dispose() {
     _disposed = true;
+    WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
   }
