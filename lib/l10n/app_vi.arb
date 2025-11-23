@@ -289,5 +289,20 @@
   "productsUsed": "Sản phẩm đã sử dụng",
   "editVisit": "Chỉnh Sửa Lần Hẹn",
   "deleteVisit": "Xóa Lần Hẹn",
-  "visitUpdatedSuccessfully": "Lần hẹn đã được cập nhật thành công"
+  "visitUpdatedSuccessfully": "Lần hẹn đã được cập nhật thành công",
+
+  "businessOverview": "Tổng Quan Kinh Doanh",
+  "totalClients": "Tổng Số Khách Hàng",
+  "activeStaff": "Nhân Viên Đang Hoạt Động",
+  "recentVisits": "Lần Hẹn Gần Đây",
+  "lovedStyles": "Phong Cách Yêu Thích",
+  "last30Days": "30 ngày qua",
+  "clientFavorites": "Yêu thích của khách hàng",
+  "quickActions": "Thao Tác Nhanh",
+  "staff": "Nhân Viên",
+  "manageTeamMembers": "Quản lý thành viên nhóm",
+  "services": "Dịch Vụ",
+  "manageServices": "Quản lý dịch vụ",
+  "appSettingsAndConfiguration": "Cài đặt và cấu hình ứng dụng",
+  "refresh": "Làm mới"
 }

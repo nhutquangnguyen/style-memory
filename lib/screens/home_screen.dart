@@ -105,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   onPressed: _loadMetrics,
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: l10n.refresh,
                 ),
               ],
             ),
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: AppTheme.spacingLarge),
 
                     // Business Metrics Section
-                    _buildMetricsSection(),
+                    _buildMetricsSection(l10n),
 
                     const SizedBox(height: AppTheme.spacingLarge),
 
@@ -226,12 +226,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMetricsSection() {
+  Widget _buildMetricsSection(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Business Overview',
+          l10n.businessOverview,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -253,7 +253,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildMetricCard(
-                  'Total Clients',
+                  l10n.totalClients,
                   _metrics['totalClients']?.toString() ?? '0',
                   Icons.people_rounded,
                   AppTheme.primaryColor,
@@ -262,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: AppTheme.spacingMedium),
               Expanded(
                 child: _buildMetricCard(
-                  'Active Staff',
+                  l10n.activeStaff,
                   _metrics['totalStaff']?.toString() ?? '0',
                   Icons.person_rounded,
                   Colors.blue,
@@ -278,21 +278,21 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: _buildMetricCard(
-                  'Recent Visits',
+                  l10n.recentVisits,
                   '${_metrics['recentVisits'] ?? 0}',
                   Icons.event_rounded,
                   Colors.green,
-                  subtitle: 'Last 30 days',
+                  subtitle: l10n.last30Days,
                 ),
               ),
               const SizedBox(width: AppTheme.spacingMedium),
               Expanded(
                 child: _buildMetricCard(
-                  'Loved Styles',
+                  l10n.lovedStyles,
                   '${_metrics['lovedVisits'] ?? 0}',
                   Icons.favorite_rounded,
                   Colors.red,
-                  subtitle: 'Client favorites',
+                  subtitle: l10n.clientFavorites,
                 ),
               ),
             ],
@@ -398,7 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Actions',
+          l10n.quickActions,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
           ),
@@ -409,8 +409,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Expanded(
               child: _buildActionButton(
-                'Staff',
-                'Manage team members',
+                l10n.staff,
+                l10n.manageTeamMembers,
                 Icons.people_alt_rounded,
                 AppTheme.primaryColor,
                 () => context.goNamed('staff_list'),
@@ -419,8 +419,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: AppTheme.spacingMedium),
             Expanded(
               child: _buildActionButton(
-                'Services',
-                'Manage services',
+                l10n.services,
+                l10n.manageServices,
                 Icons.content_cut_rounded,
                 Colors.purple,
                 () => context.goNamed('services'),
@@ -433,8 +433,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Settings button (full width)
         _buildActionButton(
-          'Settings',
-          'App settings and configuration',
+          l10n.settings,
+          l10n.appSettingsAndConfiguration,
           Icons.settings_rounded,
           Colors.grey[600]!,
           () => context.goNamed('settings'),

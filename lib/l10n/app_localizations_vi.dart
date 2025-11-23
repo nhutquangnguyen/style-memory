@@ -100,7 +100,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get service => 'Dịch vụ';
 
   @override
-  String get staff => 'Nhân viên';
+  String get staff => 'Nhân Viên';
 
   @override
   String get rating => 'Đánh giá';
@@ -166,7 +166,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get about => 'Giới Thiệu';
 
   @override
-  String get manageTeamMembers => 'Quản lý thành viên nhóm của bạn';
+  String get manageTeamMembers => 'Quản lý thành viên nhóm';
 
   @override
   String get manageServicesAndPricing => 'Quản lý dịch vụ và giá cả';
@@ -789,4 +789,31 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get visitUpdatedSuccessfully => 'Lần hẹn đã được cập nhật thành công';
+
+  @override
+  String get businessOverview => 'Tổng Quan Kinh Doanh';
+
+  @override
+  String get recentVisits => 'Lần Hẹn Gần Đây';
+
+  @override
+  String get last30Days => '30 ngày qua';
+
+  @override
+  String get clientFavorites => 'Yêu thích của khách hàng';
+
+  @override
+  String get quickActions => 'Thao Tác Nhanh';
+
+  @override
+  String get services => 'Dịch Vụ';
+
+  @override
+  String get manageServices => 'Quản lý dịch vụ';
+
+  @override
+  String get appSettingsAndConfiguration => 'Cài đặt và cấu hình ứng dụng';
+
+  @override
+  String get refresh => 'Làm mới';
 }

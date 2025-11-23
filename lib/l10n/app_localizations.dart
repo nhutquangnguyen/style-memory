@@ -413,7 +413,7 @@ abstract class AppLocalizations {
   /// No description provided for @manageTeamMembers.
   ///
   /// In en, this message translates to:
-  /// **'Manage your team members'**
+  /// **'Manage team members'**
   String get manageTeamMembers;
 
   /// No description provided for @manageServicesAndPricing.
@@ -1585,6 +1585,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Visit updated successfully'**
   String get visitUpdatedSuccessfully;
+
+  /// No description provided for @businessOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Business Overview'**
+  String get businessOverview;
+
+  /// No description provided for @recentVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent Visits'**
+  String get recentVisits;
+
+  /// No description provided for @last30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 days'**
+  String get last30Days;
+
+  /// No description provided for @clientFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Client favorites'**
+  String get clientFavorites;
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Actions'**
+  String get quickActions;
+
+  /// No description provided for @services.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get services;
+
+  /// No description provided for @manageServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage services'**
+  String get manageServices;
+
+  /// No description provided for @appSettingsAndConfiguration.
+  ///
+  /// In en, this message translates to:
+  /// **'App settings and configuration'**
+  String get appSettingsAndConfiguration;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
 }
 
 class _AppLocalizationsDelegate

@@ -340,5 +340,20 @@
   "productsUsed": "Products Used",
   "editVisit": "Edit Visit",
   "deleteVisit": "Delete Visit",
-  "visitUpdatedSuccessfully": "Visit updated successfully"
+  "visitUpdatedSuccessfully": "Visit updated successfully",
+
+  "businessOverview": "Business Overview",
+  "totalClients": "Total Clients",
+  "activeStaff": "Active Staff",
+  "recentVisits": "Recent Visits",
+  "lovedStyles": "Loved Styles",
+  "last30Days": "Last 30 days",
+  "clientFavorites": "Client favorites",
+  "quickActions": "Quick Actions",
+  "staff": "Staff",
+  "manageTeamMembers": "Manage team members",
+  "services": "Services",
+  "manageServices": "Manage services",
+  "appSettingsAndConfiguration": "App settings and configuration",
+  "refresh": "Refresh"
 }

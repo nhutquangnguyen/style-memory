@@ -166,7 +166,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get about => 'About';
 
   @override
-  String get manageTeamMembers => 'Manage your team members';
+  String get manageTeamMembers => 'Manage team members';
 
   @override
   String get manageServicesAndPricing => 'Manage your services and pricing';
@@ -812,4 +812,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get visitUpdatedSuccessfully => 'Visit updated successfully';
+
+  @override
+  String get businessOverview => 'Business Overview';
+
+  @override
+  String get recentVisits => 'Recent Visits';
+
+  @override
+  String get last30Days => 'Last 30 days';
+
+  @override
+  String get clientFavorites => 'Client favorites';
+
+  @override
+  String get quickActions => 'Quick Actions';
+
+  @override
+  String get services => 'Services';
+
+  @override
+  String get manageServices => 'Manage services';
+
+  @override
+  String get appSettingsAndConfiguration => 'App settings and configuration';
+
+  @override
+  String get refresh => 'Refresh';
 }
